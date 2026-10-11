@@ -23,6 +23,16 @@ export const LAUNCH_FLAGS = {
    */
   codexAccounts: true,
   /**
+   * Factory Droid as a selectable AI-account provider. OFF (ships dark): the
+   * account plumbing (detection, passthrough rows, model catalog, runner
+   * foundation) is in place but the executor's droid execution branch has not
+   * shipped. When false, droid can't be added and any existing droid row is
+   * hidden from selection reads while write/sync/dedup paths still see it.
+   * Auth is passthrough — Frink never stores a Factory key (`droid` owns
+   * `~/.factory`).
+   */
+  droidAccounts: false,
+  /**
    * Fable 5 model availability. ON — `claude-fable-5` is available again after
    * Anthropic's temporary pull (US-government concerns). Kept as a one-flag
    * kill-switch because availability is externally controlled and has been

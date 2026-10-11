@@ -283,7 +283,7 @@ export type MobileComposer = {
   mode: MobileChatMode;
   /** Debug needs a project, as on desktop. */
   debugAvailable: boolean;
-  provider: 'claude' | 'codex';
+  provider: 'claude' | 'codex' | 'droid';
   account: {
     id: string | null;
     label: string;

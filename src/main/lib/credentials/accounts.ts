@@ -11,7 +11,7 @@ import { markRowNeedsReauth, markRowResolved } from './row-state';
 import { withCredentialRowOperation } from '../integrations/connection-lifecycle-operation';
 import { captureMainMessage } from '../sentry/init';
 import { retireRetainedSessions } from '../socket/claude-session-registry';
-import { probeClaudePassthroughSource, probeCodexPassthroughSource } from './source-readers';
+import { probeClaudePassthroughSource, probeCodexPassthroughSource, probeDroidPassthroughSource } from './source-readers';
 import { claudeCodeCredentials, getDatabase } from '../db';
 import type { AIAccountType, CredentialSource } from '../db/schema';
 
@@ -39,9 +39,9 @@ const CLAUDE_TYPE_FILTER = sql`${claudeCodeCredentials.type} = 'claude-code'`;
  * Ranks currently-resolvable rows first: passthrough without `needsReauthAt`, or api-key with a
  * token. Use as the first `desc()` in `.orderBy`, before `desc(connectedAt)`. Never for id lookups.
  */
-export const RESOLVABLE_FIRST_RANK = sql`((${claudeCodeCredentials.source} IN ('claude-passthrough', 'codex-passthrough') AND ${claudeCodeCredentials.needsReauthAt} IS NULL) OR ${claudeCodeCredentials.oauthToken} IS NOT NULL)`;
+export const RESOLVABLE_FIRST_RANK = sql`((${claudeCodeCredentials.source} IN ('claude-passthrough', 'codex-passthrough', 'droid-passthrough') AND ${claudeCodeCredentials.needsReauthAt} IS NULL) OR ${claudeCodeCredentials.oauthToken} IS NOT NULL)`;
 
-const PASSTHROUGH_RANK = sql`(${claudeCodeCredentials.source} IN ('claude-passthrough', 'codex-passthrough'))`;
+const PASSTHROUGH_RANK = sql`(${claudeCodeCredentials.source} IN ('claude-passthrough', 'codex-passthrough', 'droid-passthrough'))`;
 
 type CredentialRow = {
   id: string;
@@ -65,7 +65,7 @@ import { decryptToken } from './token-crypto';
  */
 function accountType(cred: { type?: string | null } | undefined): AIAccountType {
   const t = cred?.type;
-  if (t === 'claude-code' || t === 'codex') return t;
+  if (t === 'claude-code' || t === 'codex' || t === 'droid') return t;
   return 'claude-code';
 }
 
@@ -100,17 +100,23 @@ export const passthroughDeps = {
 };
 
 export function isPassthroughSource(source: string | null | undefined): boolean {
-  return source === 'claude-passthrough' || source === 'codex-passthrough';
+  return (
+    source === 'claude-passthrough' ||
+    source === 'codex-passthrough' ||
+    source === 'droid-passthrough'
+  );
 }
 
-// `email` undefined = identity not observable without reading the secret (codex); keep the stored one.
+// `email` undefined = identity not observable without reading the secret (codex/droid); keep the stored one.
 type LiveLoginProbe =
   | { ok: true; email?: string | null; login?: string }
   | { ok: false; transient: boolean; detail: string };
 
 /** Is the provider's own login present on this machine right now (presence only), and as whom? */
 async function probeLiveLogin(row: CredentialRow): Promise<LiveLoginProbe> {
-  if (row.source !== 'codex-passthrough' && !row.sourcePath) {
+  const machineLocalPassthrough =
+    row.source === 'codex-passthrough' || row.source === 'droid-passthrough';
+  if (!machineLocalPassthrough && !row.sourcePath) {
     return { ok: false, transient: false, detail: 'missing sourcePath' };
   }
   // Presence only, with no expiry check: the CLI refreshes its own keychain item under a
@@ -118,13 +124,15 @@ async function probeLiveLogin(row: CredentialRow): Promise<LiveLoginProbe> {
   const result =
     row.source === 'codex-passthrough'
       ? await probeCodexPassthroughSource()
-      : await probeClaudePassthroughSource(row.sourcePath ?? '');
+      : row.source === 'droid-passthrough'
+        ? await probeDroidPassthroughSource()
+        : await probeClaudePassthroughSource(row.sourcePath ?? '');
   if ('error' in result) {
     // 'denied' (locked keychain, TCC prompt, probe timeout) is transient, so persist nothing.
     // 'missing'/'malformed' means logged out: the flag gates the UI and self-clears on a good probe.
     return { ok: false, transient: result.error === 'denied', detail: result.error };
   }
-  if (row.source === 'codex-passthrough') return { ok: true };
+  if (machineLocalPassthrough) return { ok: true };
   // The login keys a retained Claude CLI (session-key): an organization switch keeps the email.
   const { email = null, accountUuid, organizationUuid } = passthroughDeps.readLiveLogin();
   return { ok: true, email, login: [accountUuid, organizationUuid].join('/') };
@@ -164,7 +172,7 @@ async function resolvePassthrough(
     // Token-null on purpose: the executor pins CLAUDE_SECURESTORAGE_CONFIG_DIR='' so the CLI
     // reads the canonical keychain item and owns rotation (decisions/claude-credential-ownership-at-spawn).
     token: null,
-    label: row.accountLabel || (type === 'codex' ? 'OpenAI' : 'Claude Code'),
+    label: row.accountLabel || (type === 'codex' ? 'OpenAI' : type === 'droid' ? 'Factory' : 'Claude Code'),
     isApiKey: false,
     type,
     passthrough: true,

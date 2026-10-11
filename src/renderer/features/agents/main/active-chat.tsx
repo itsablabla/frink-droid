@@ -2057,7 +2057,7 @@ export const ChatView = memo(function ChatView({
   );
   // Assigned during render, not in an effect: child effects (first-message auto-generate) run
   // before a parent effect would, and must already see the resolved type.
-  const executionAccountTypeRef = useRef<'claude-code' | 'codex'>('claude-code');
+  const executionAccountTypeRef = useRef<'claude-code' | 'codex' | 'droid'>('claude-code');
   if (resolvedAccountForExecution?.type != null) {
     executionAccountTypeRef.current = resolvedAccountForExecution.type;
   }

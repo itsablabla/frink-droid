@@ -32,7 +32,7 @@ type Props = ComposerForwardedProps & {
   /** Refetch execution account (shown on error). */
   onRetryResolvedAccount?: () => void;
   /** Unauthenticated account info for the reconnect CTA. Null when no account is configured at all. */
-  unauthAccount?: { label: string; type: 'claude-code' | 'codex' } | null;
+  unauthAccount?: { label: string; type: 'claude-code' | 'codex' | 'droid' } | null;
 };
 
 /** ChatInputSection — the composer, or an account state in its place, in ChatDock's stack.

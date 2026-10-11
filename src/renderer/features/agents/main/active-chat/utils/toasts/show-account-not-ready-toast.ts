@@ -10,7 +10,7 @@ export const ACCOUNT_NOT_READY_TOAST_MESSAGE_START_CHAT =
   'Connect a Claude account or add an API key to start a chat.';
 
 export type UnauthAccountForSend =
-  | { label: string; type: 'claude-code' | 'codex' }
+  | { label: string; type: 'claude-code' | 'codex' | 'droid' }
   | null
   | undefined;
 

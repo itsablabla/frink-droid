@@ -11,11 +11,12 @@
 
 import { toast } from 'sonner';
 
-type ToolType = 'claude-code' | 'codex';
+type ToolType = 'claude-code' | 'codex' | 'droid';
 
 const TOOL_LABEL: Record<ToolType, string> = {
   'claude-code': 'Claude',
   codex: 'OpenAI',
+  droid: 'Factory',
 };
 
 const SWITCH_DESCRIPTION: Record<ToolType, string> = {
@@ -25,6 +26,10 @@ const SWITCH_DESCRIPTION: Record<ToolType, string> = {
   // per-tool rules, like Claude — so no advisory caveat.
   codex:
     "Your MCP servers, skills, commands & agents came with you. Two things change: agent tool limits are now fully enforced (exact per-tool rules), and agent models reset to OpenAI's default.",
+  // Droid runs headless with preset autonomy tiers rather than Frink's interactive
+  // per-tool gate, so lead with that delta.
+  droid:
+    "Your MCP servers came with you. Two things change: tool permissions follow Droid's autonomy level (not per-tool prompts), and agent models reset to Factory's default.",
 };
 
 /**

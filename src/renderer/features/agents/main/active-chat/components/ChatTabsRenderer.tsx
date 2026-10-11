@@ -46,7 +46,7 @@ type Props = {
   isErrorResolvedAccount?: boolean;
   onRetryResolvedAccount?: () => void;
   /** When account exists but is not authenticated, surfaces the reconnect CTA in the composer area. */
-  unauthAccount?: { label: string; type: 'claude-code' | 'codex' } | null;
+  unauthAccount?: { label: string; type: 'claude-code' | 'codex' | 'droid' } | null;
   handleRestoreWorkspace: () => void;
   // biome-ignore lint/style/useNamingConvention: Renders as a component
   ChatViewInnerComponent: ComponentType<ChatViewInnerProps>;

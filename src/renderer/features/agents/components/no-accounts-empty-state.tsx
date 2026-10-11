@@ -16,7 +16,7 @@ import {
   pendingAccountAuthAtom,
 } from '../../../lib/atoms';
 
-type Provider = 'claude-code' | 'codex';
+type Provider = 'claude-code' | 'codex' | 'droid';
 
 type SignedOutAccount = {
   label: string;
@@ -56,6 +56,7 @@ const PROVIDER_COPY = {
     switchTo: 'Or switch to your Claude plan',
   },
   codex: { plan: 'ChatGPT plan, through Codex', switchTo: 'Or switch to your ChatGPT plan' },
+  droid: { plan: 'Factory plan, through Droid', switchTo: 'Or switch to your Factory plan' },
 } satisfies Record<Provider, { plan: string; switchTo: string }>;
 
 const PROVIDER_NAMES = LAUNCH_FLAGS.codexAccounts ? 'Claude or OpenAI' : 'Claude';
@@ -65,7 +66,11 @@ const WINDOWS_NOTE = `Signing in with ${PROVIDER_NAMES} needs macOS or Linux.`;
 function signInProviders(): Provider[] {
   // The renderer-side platform helper: `process` isn't exposed under contextIsolation.
   if (isWindows()) return [];
-  return LAUNCH_FLAGS.codexAccounts ? ['claude-code', 'codex'] : ['claude-code'];
+  return [
+    'claude-code',
+    ...(LAUNCH_FLAGS.codexAccounts ? (['codex'] as const) : []),
+    ...(LAUNCH_FLAGS.droidAccounts ? (['droid'] as const) : []),
+  ];
 }
 
 /** Opens the provider's connect page through the App.tsx pendingAccountAuth gate. */

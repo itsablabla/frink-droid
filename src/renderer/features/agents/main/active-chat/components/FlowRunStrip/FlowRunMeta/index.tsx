@@ -5,7 +5,7 @@ import { iconifyComponent } from '@/lib/utils/iconify-component';
  * The read-only mode / model / auto-review readout carried by both flow bottom surfaces — what the
  * composer's selectors showed, restored now that a running or paused flow replaces the composer.
  */
-import { Rocket, Zap, Sparkles } from 'lucide-react';
+import { Rocket, Zap, Sparkles, Bot } from 'lucide-react';
 import type { ComponentType } from 'react';
 import {
   CODEX_FAST_SPEED_MULTIPLIER,
@@ -25,7 +25,7 @@ import { HIDE_CONTEXT_PILLS, HIDE_MODEL_TEXT, HIDE_PILL_TEXT } from '../FlowSurf
 const ClaudeCodeIcon = iconifyComponent(claudeLogo);
 const CodexIcon = iconifyComponent(openaiLogo);
 
-const PROVIDER_ICON = { claude: ClaudeCodeIcon, codex: CodexIcon } as const;
+const PROVIDER_ICON = { claude: ClaudeCodeIcon, codex: CodexIcon, droid: Bot } as const;
 
 const META_PILL_CLASS =
   'inline-flex shrink-0 items-center gap-1 rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 text-[11px] text-muted-foreground';

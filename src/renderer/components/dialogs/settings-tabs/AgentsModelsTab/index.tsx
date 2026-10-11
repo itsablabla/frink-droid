@@ -38,6 +38,7 @@ export function AgentsModelsTab(): ReactElement {
   const accountsListFailed = accountsQueryFetched && accountsQueryError;
   const showClaudeModels = accountRows.some((a) => a.type === 'claude-code' && a.isAuthenticated);
   const showCodexModels = accountRows.some((a) => a.type === 'codex' && a.isAuthenticated);
+  const showDroidModels = accountRows.some((a) => a.type === 'droid' && a.isAuthenticated);
 
   const handleAuthenticate = (account: AccountAuthSelection) => {
     setPendingAccountAuth(buildPendingReauthState(account));
@@ -74,6 +75,7 @@ export function AgentsModelsTab(): ReactElement {
           authGateReady={authGateReady}
           showClaudeModels={showClaudeModels}
           showCodexModels={showCodexModels}
+          showDroidModels={showDroidModels}
           accountsListFailed={accountsListFailed}
           onRetryAccounts={refetchAccounts}
         />

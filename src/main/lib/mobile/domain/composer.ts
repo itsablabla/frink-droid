@@ -5,10 +5,13 @@ import { codexTierCredits } from '../../../../shared/lib/codex-cli-models';
 import {
   CLAUDE_CODE_MODELS,
   CODEX_MODELS,
+  DROID_MODELS,
   claudeModelToPickerItem,
   codexModelToPickerItem,
+  droidModelToPickerItem,
   isClaudeModelVisible,
   isCodexModelVisible,
+  isDroidModelVisible,
   normalizeModelIdForExecutionAccount,
 } from '../../../../shared/lib/models';
 import type {
@@ -38,7 +41,12 @@ type SetAccountRequest = Extract<MobileRequest, { type: 'setAccount' }>;
 // The desktop hides no family by default; per-window hidden families stay a desktop preference.
 const NO_HIDDEN_FAMILIES: string[] = [];
 
-function pickerModels(provider: 'claude' | 'codex'): MobilePickerModel[] {
+function pickerModels(provider: 'claude' | 'codex' | 'droid'): MobilePickerModel[] {
+  if (provider === 'droid') {
+    return DROID_MODELS.filter((m) => isDroidModelVisible(m, NO_HIDDEN_FAMILIES)).map(
+      droidModelToPickerItem,
+    );
+  }
   return provider === 'codex'
     ? CODEX_MODELS.filter((m) => isCodexModelVisible(m, NO_HIDDEN_FAMILIES)).map(
         codexModelToPickerItem,
@@ -72,10 +80,14 @@ export async function readMobileComposer(input: ComposerRequest): Promise<Mobile
   ]);
   const stored = readComposerSettings(chat.id);
   if (!stored) throw new MobileApiError(404, 'Chat not found.');
-  const provider = account?.type === 'codex' ? 'codex' : 'claude';
+  const provider =
+    account?.type === 'codex' ? 'codex' : account?.type === 'droid' ? 'droid' : 'claude';
   // Shown normalized (as the desktop picker does) but never stored normalized: flipping the
   // account back must not lose the other provider's choice.
-  const modelId = normalizeModelIdForExecutionAccount(provider === 'codex', stored.modelId);
+  const modelId = normalizeModelIdForExecutionAccount(
+    provider === 'claude' ? 'claude-code' : provider,
+    stored.modelId,
+  );
   return {
     mode: (subChat.mode as MobileChatMode) ?? 'agent',
     debugAvailable: Boolean(chat.projectId),
@@ -157,6 +169,8 @@ export async function setMobileAccount(input: SetAccountRequest): Promise<Mobile
 
 function isKnownModel(modelId: string): boolean {
   return (
-    CLAUDE_CODE_MODELS.some((m) => m.id === modelId) || CODEX_MODELS.some((m) => m.id === modelId)
+    CLAUDE_CODE_MODELS.some((m) => m.id === modelId) ||
+    CODEX_MODELS.some((m) => m.id === modelId) ||
+    DROID_MODELS.some((m) => m.id === modelId)
   );
 }

@@ -2,7 +2,7 @@ import openaiLogo from '@iconify-icons/ri/openai-fill';
 import { iconifyComponent } from '@/lib/utils/iconify-component';
 /* eslint-disable max-lines, max-lines-per-function */
 import { useSetAtom } from 'jotai';
-import { Check, ChevronDown, Plus, RefreshCw, Settings, User } from 'lucide-react';
+import { Check, ChevronDown, Plus, RefreshCw, Settings, User, Bot } from 'lucide-react';
 import { Fragment, memo, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
@@ -30,21 +30,23 @@ const CodexIcon = iconifyComponent(openaiLogo);
 const PROVIDER_LABEL = {
   'claude-code': 'Claude Code',
   codex: 'OpenAI',
-} as const satisfies Record<'claude-code' | 'codex', string>;
+  droid: 'Factory',
+} as const satisfies Record<'claude-code' | 'codex' | 'droid', string>;
 
-/** Provider glyph for the trigger badge and each dropdown row. Codex has a brand mark; Claude falls back to the generic user icon. */
+/** Provider glyph for the trigger badge and each dropdown row. Codex has a brand mark; Claude and Droid fall back to generic icons. */
 function ProviderGlyph({
   type,
   className,
 }: {
-  type?: 'claude-code' | 'codex' | null;
+  type?: 'claude-code' | 'codex' | 'droid' | null;
   className?: string;
 }) {
   if (type === 'codex') return <CodexIcon className={className} aria-hidden />;
+  if (type === 'droid') return <Bot className={className} aria-hidden />;
   return <User className={className} aria-hidden />;
 }
 
-type AccountType = 'claude-code' | 'codex';
+type AccountType = 'claude-code' | 'codex' | 'droid';
 type PickableAccount = { id: string; label: string; type: AccountType; isAuthenticated: boolean };
 
 /** One signed-in login under its provider's heading. */
@@ -83,6 +85,7 @@ function useOpenAccountsSettings() {
 const ADD_LOGIN_LABEL = {
   'claude-code': 'Add a Claude Code login…',
   codex: 'Add an OpenAI login…',
+  droid: 'Add a Factory login…',
 } as const satisfies Record<AccountType, string>;
 
 /**

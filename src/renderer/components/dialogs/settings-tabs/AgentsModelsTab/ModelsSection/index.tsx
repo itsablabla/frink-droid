@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import {
   CLAUDE_MODEL_FAMILIES,
   CODEX_MODEL_FAMILIES,
+  DROID_MODEL_FAMILIES,
   splitNewestFamilies,
 } from '../../../../../../shared/lib/models';
 import { hiddenModelsAtom } from '../../../../../lib/atoms';
@@ -20,6 +21,7 @@ type Family = { id: string; name: string };
 const CATALOG = {
   'claude-code': CLAUDE_MODEL_FAMILIES,
   codex: CODEX_MODEL_FAMILIES,
+  droid: DROID_MODEL_FAMILIES,
 } satisfies Record<AccountType, readonly Family[]>;
 
 type Props = {
@@ -27,6 +29,7 @@ type Props = {
   authGateReady: boolean;
   showClaudeModels: boolean;
   showCodexModels: boolean;
+  showDroidModels?: boolean;
   /** After fetch completed with an error; catalog stays ungated until retry succeeds. */
   accountsListFailed?: boolean;
   onRetryAccounts?: () => void;
@@ -103,14 +106,18 @@ export function ModelsSection({
   authGateReady,
   showClaudeModels,
   showCodexModels,
+  showDroidModels = false,
   accountsListFailed = false,
   onRetryAccounts,
 }: Props) {
   const [hiddenModels, setHiddenModels] = useAtom(hiddenModelsAtom);
 
   // Until accounts load, show every provider rather than flashing an empty card.
-  const providers = (['claude-code', 'codex'] as const).filter(
-    (p) => !authGateReady || (p === 'codex' ? showCodexModels : showClaudeModels),
+  // Droid is opt-in even pre-load: it ships dark, so the catalog never flashes it.
+  const providers = (['claude-code', 'codex', 'droid'] as const).filter((p) =>
+    p === 'droid'
+      ? showDroidModels
+      : !authGateReady || (p === 'codex' ? showCodexModels : showClaudeModels),
   );
 
   const toggleModel = (provider: AccountType, family: Family) => {

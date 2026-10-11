@@ -99,7 +99,7 @@ export type ChatViewInnerProps = {
   /** Refetch execution account after error (passed to composer retry control). */
   onRetryResolvedAccount?: () => void;
   /** When account exists but is not authenticated, surfaces the reconnect CTA. Null when no account is configured. */
-  unauthAccount?: { label: string; type: 'claude-code' | 'codex' } | null;
+  unauthAccount?: { label: string; type: 'claude-code' | 'codex' | 'droid' } | null;
 };
 
 /**

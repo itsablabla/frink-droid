@@ -193,7 +193,7 @@ export type PendingAccountAuthState = {
   mode: 'add' | 'reauth';
   returnToSettings?: boolean;
   /** Which connect page to route to. Absent/undefined = Claude (backward-compatible). */
-  provider?: 'claude-code' | 'codex';
+  provider?: 'claude-code' | 'codex' | 'droid';
 };
 
 // Track pending Claude/Codex account connect/reconnect flow from Settings.

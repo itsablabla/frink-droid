@@ -2,6 +2,11 @@ import { LAUNCH_FLAGS } from '../../launch-flags';
 import type { ClaudeSdkEffortLevel } from '../../types/execution';
 import { CODEX_CLI_MODELS, CODEX_DEFAULT_MODEL_ID, type CodexCliModel } from '../codex-cli-models';
 import {
+  DROID_CLI_MODELS,
+  DROID_DEFAULT_MODEL_ID,
+  type DroidCliModel,
+} from '../droid-cli-models';
+import {
   CLAUDE_CODE_MODELS_CATALOG,
   CLAUDE_ULTRA_SUFFIX,
   type ClaudeCodeModel,
@@ -216,15 +221,20 @@ export function claudeModelToPickerItem(m: ClaudeCodeModel): ModelPickerItem & {
 export const CLAUDE_PICKER_MODELS = CLAUDE_CODE_MODELS.map(claudeModelToPickerItem);
 
 /**
- * Coerce a picker model id to one valid for the resolved execution account (Codex / Claude).
+ * Coerce a picker model id to one valid for the resolved execution account (Codex / Droid / Claude).
  * Shared by `useModelNormalization` and new-chat seeding — keep catalog rules in one place. An account
  * switch (e.g. Claude → Codex) leaves a stale cross-provider id that must snap to that provider's default.
+ * `account` accepts the legacy boolean (`true` = codex) or an explicit account kind.
  */
 export function normalizeModelIdForExecutionAccount(
-  isCodexAccount: boolean,
+  account: boolean | 'claude-code' | 'codex' | 'droid',
   modelId: string,
 ): string {
-  if (isCodexAccount) {
+  const kind = typeof account === 'boolean' ? (account ? 'codex' : 'claude-code') : account;
+  if (kind === 'droid') {
+    return DROID_MODELS.some((m) => m.id === modelId) ? modelId : DROID_DEFAULT_MODEL_ID;
+  }
+  if (kind === 'codex') {
     return CODEX_MODELS.some((m) => m.id === modelId) ? modelId : CODEX_DEFAULT_MODEL_ID;
   }
   if (!CLAUDE_MODEL_IDS.includes(modelId)) return CLAUDE_DEFAULT_MODEL;
@@ -258,4 +268,20 @@ export const CODEX_MODEL_ID_MAP: Record<string, string> = modelIdMap(CODEX_MODEL
 
 export function codexModelToPickerItem(m: CodexCliModel): ModelPickerItem {
   return toModelPickerItem(m, m.reasoningEffort);
+}
+
+/** Factory Droid models: picker id forwards the slug raw (see droid-cli-models). */
+export const DROID_MODELS: DroidCliModel[] = DROID_CLI_MODELS;
+
+/** Deduped families for settings visibility (toggle hides whole `familyId`). */
+export const DROID_MODEL_FAMILIES = modelFamilies(DROID_MODELS);
+
+export function isDroidModelVisible(model: DroidCliModel, hiddenFamilyIds: string[]): boolean {
+  return isModelVisible(model, hiddenFamilyIds);
+}
+
+export const DROID_MODEL_ID_MAP: Record<string, string> = modelIdMap(DROID_MODELS);
+
+export function droidModelToPickerItem(m: DroidCliModel): ModelPickerItem {
+  return toModelPickerItem(m, undefined);
 }
