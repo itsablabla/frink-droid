@@ -6,12 +6,14 @@
 import {
   CLAUDE_CODE_MODELS,
   CODEX_MODELS,
+  DROID_MODELS,
   claudeModelToPickerItem,
   codexModelToPickerItem,
+  droidModelToPickerItem,
 } from '../models';
 
 /** The provider catalogs a picker id can belong to. */
-export type ModelPickerVariant = 'claude' | 'codex';
+export type ModelPickerVariant = 'claude' | 'codex' | 'droid';
 
 /**
  * The fields the trigger/pill label reads — a structural subset every provider picker item
@@ -55,5 +57,7 @@ export function resolveModelPickerItemById(
   if (claude) return { item: claudeModelToPickerItem(claude), variant: 'claude' };
   const codex = CODEX_MODELS.find((m) => m.id === id);
   if (codex) return { item: codexModelToPickerItem(codex), variant: 'codex' };
+  const droid = DROID_MODELS.find((m) => m.id === id);
+  if (droid) return { item: droidModelToPickerItem(droid), variant: 'droid' };
   return null;
 }

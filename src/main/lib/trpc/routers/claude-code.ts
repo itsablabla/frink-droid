@@ -17,6 +17,7 @@ import {
 } from '../../credentials';
 import { detectClaudeAccount } from '../../credentials/detect';
 import { detectCodexAccount } from '../../credentials/detect-codex';
+import { detectDroidAccount } from '../../credentials/detect-droid';
 import { ALLOWED_SOURCE_PATH_SCHEMES } from '../../credentials/source-readers';
 import { type AIAccountType, claudeCodeCredentials, getDatabase } from '../../db';
 import { getChatById } from '../../db/repos/chats';
@@ -48,7 +49,7 @@ const CLAUDE_ACCOUNT_SCOPE = sql`(${claudeCodeCredentials.type} = 'claude-code' 
 // Local default/existence management across ALL local providers INCLUDING codex. Used for
 // first-account checks + default clearing/promotion so exactly one row stays isDefault=1 — e.g.
 // connecting a claude account after a default codex must clear the codex default.
-const LOCAL_DEFAULT_ACCOUNT_SCOPE = sql`(${claudeCodeCredentials.type} IN ('claude-code', 'codex') OR ${claudeCodeCredentials.type} IS NULL)`;
+const LOCAL_DEFAULT_ACCOUNT_SCOPE = sql`(${claudeCodeCredentials.type} IN ('claude-code', 'codex', 'droid') OR ${claudeCodeCredentials.type} IS NULL)`;
 
 /**
  * Account types selectable in the UI (codex behind `LAUNCH_FLAGS.codexAccounts`). Hiding is
@@ -57,22 +58,25 @@ const LOCAL_DEFAULT_ACCOUNT_SCOPE = sql`(${claudeCodeCredentials.type} IN ('clau
 const SELECTABLE_ACCOUNT_TYPES: AIAccountType[] = [
   'claude-code',
   ...(LAUNCH_FLAGS.codexAccounts ? (['codex'] as const) : []),
+  ...(LAUNCH_FLAGS.droidAccounts ? (['droid'] as const) : []),
 ];
 const SELECTABLE_ACCOUNT_TYPE_SCOPE = inArray(claudeCodeCredentials.type, SELECTABLE_ACCOUNT_TYPES);
 // Legacy NULL rows pre-date type-tagging and mean 'claude-code'.
 const SELECTABLE_ACCOUNT_TYPE_SCOPE_WITH_NULL = sql`(${SELECTABLE_ACCOUNT_TYPE_SCOPE} OR ${claudeCodeCredentials.type} IS NULL)`;
 
 // Among unresolvable candidates prefer a passthrough row: getResolvedAccount heals it by re-probing.
-const HEALABLE_NEXT_RANK = sql`${claudeCodeCredentials.source} IN ('claude-passthrough', 'codex-passthrough')`;
+const HEALABLE_NEXT_RANK = sql`${claudeCodeCredentials.source} IN ('claude-passthrough', 'codex-passthrough', 'droid-passthrough')`;
 
-/** Account type for the selection/switch surfaces (claude-code | codex; NULL legacy → claude-code). */
-function resolveAccountType(row: { type?: string | null } | undefined): 'claude-code' | 'codex' {
-  return row?.type === 'codex' ? 'codex' : 'claude-code';
+/** Account type for the selection/switch surfaces (claude-code | codex | droid; NULL legacy → claude-code). */
+function resolveAccountType(
+  row: { type?: string | null } | undefined,
+): 'claude-code' | 'codex' | 'droid' {
+  return row?.type === 'codex' || row?.type === 'droid' ? row.type : 'claude-code';
 }
 
 /** Display name for a row whose account_label is NULL (pre-label rows, cloud placeholders). */
-function defaultAccountLabel(type: 'claude-code' | 'codex'): string {
-  return type === 'codex' ? 'OpenAI' : 'Claude Code';
+function defaultAccountLabel(type: 'claude-code' | 'codex' | 'droid'): string {
+  return type === 'codex' ? 'OpenAI' : type === 'droid' ? 'Factory' : 'Claude Code';
 }
 
 /**
@@ -411,6 +415,19 @@ export const claudeCodeRouter = router({
   }),
 
   /**
+   * Detect a usable Factory Droid login on this machine without touching the token (the
+   * `droid` binary owns ~/.factory). Flag-gated: while droid ships dark this returns
+   * unavailable, so the (gated) UI never probes and `connectDroidPassthrough` stays the one
+   * creation surface. No multi-entry picker — droid auth is one-per-device, machine-local.
+   */
+  detectDroidAccount: publicProcedure.query(() => {
+    if (!LAUNCH_FLAGS.droidAccounts) {
+      return { available: false as const, hint: 'Droid accounts are not enabled.' };
+    }
+    return detectDroidAccount();
+  }),
+
+  /**
    * Create or update the single Claude passthrough row for this machine.
    *
    * - Stores `oauth_token = NULL`, `source = 'claude-passthrough'`, `sourcePath`,
@@ -691,6 +708,88 @@ export const claudeCodeRouter = router({
     }),
 
   /**
+   * Connect the local Factory Droid login as a passthrough account. Droid auth is
+   * machine-local — the `droid` binary owns `~/.factory` and Frink stores no token
+   * (the row's token is null; the runner relies on the binary at spawn). One droid
+   * login per device. LOCAL-ONLY — never synced to Neon.
+   */
+  connectDroidPassthrough: publicProcedure
+    .input(z.object({ accountLabel: z.string().min(1) }))
+    .mutation(async ({ input }) => {
+      // Server-side flag guard: the Connect UI is gated, but a DevTools/automation
+      // caller could still invoke this. While droid ships dark, refuse to persist a row.
+      if (!LAUNCH_FLAGS.droidAccounts) {
+        throw new Error('Droid accounts are not enabled.');
+      }
+
+      // Confirm the droid CLI is actually signed in on this machine (identity only —
+      // no token; the binary owns auth). Fail with the detector's hint if not.
+      const detection = detectDroidAccount();
+      if (!detection.available) {
+        throw new Error(
+          detection.hint ?? 'No Droid login found. Run `droid` and sign in, then try again.',
+        );
+      }
+
+      const db = getDatabase();
+      const expectedEmail = detection.email ?? null;
+
+      const txResult = db.transaction(() => {
+        // One droid passthrough per device (machine-local ~/.factory) — reuse the row.
+        const existing = db
+          .select()
+          .from(claudeCodeCredentials)
+          .where(eq(claudeCodeCredentials.source, 'droid-passthrough'))
+          .get();
+
+        const isFirstAccount =
+          !existing &&
+          !db
+            .select({ id: claudeCodeCredentials.id })
+            .from(claudeCodeCredentials)
+            .where(LOCAL_DEFAULT_ACCOUNT_SCOPE)
+            .limit(1)
+            .get();
+
+        if (existing) {
+          db.update(claudeCodeCredentials)
+            .set({
+              accountLabel: input.accountLabel,
+              expectedEmail,
+              needsReauthAt: null,
+              connectedAt: new Date(),
+            })
+            .where(eq(claudeCodeCredentials.id, existing.id))
+            .run();
+          return { accountId: existing.id, status: 'updated' as const };
+        }
+
+        if (isFirstAccount) {
+          clearLocalAccountDefaults();
+        }
+
+        const id = createId();
+        db.insert(claudeCodeCredentials)
+          .values({
+            id,
+            type: 'droid',
+            accountLabel: input.accountLabel,
+            oauthToken: null,
+            connectedAt: new Date(),
+            isDefault: isFirstAccount,
+            source: 'droid-passthrough',
+            sourcePath: detection.sourcePath ?? 'droid-passthrough://local',
+            expectedEmail,
+          })
+          .run();
+
+        return { accountId: id, status: 'created' as const };
+      });
+
+      return txResult;
+    }),
+
+  /**
    * Remove the local passthrough row. LOCAL-ONLY — never propagates to Neon
    * (passthrough rows are never synced to begin with).
    */
@@ -706,9 +805,13 @@ export const claudeCodeRouter = router({
       if (!row) {
         throw new Error(`Account "${input.accountId}" not found`);
       }
-      if (row.source !== 'claude-passthrough' && row.source !== 'codex-passthrough') {
+      if (
+        row.source !== 'claude-passthrough' &&
+        row.source !== 'codex-passthrough' &&
+        row.source !== 'droid-passthrough'
+      ) {
         throw new Error(
-          'disconnectClaudePassthrough only handles passthrough rows (claude/codex). Use the regular delete endpoint for API-key accounts.',
+          'disconnectClaudePassthrough only handles passthrough rows (claude/codex/droid). Use the regular delete endpoint for API-key accounts.',
         );
       }
       db.delete(claudeCodeCredentials).where(eq(claudeCodeCredentials.id, input.accountId)).run();
@@ -756,7 +859,11 @@ export const claudeCodeRouter = router({
         type: accountType,
         // Narrow the TEXT column to the runtime union at the boundary so the
         // renderer can branch on `source` without re-narrowing every render.
-        source: (acc.source ?? 'api-key') as 'api-key' | 'claude-passthrough' | 'codex-passthrough',
+        source: (acc.source ?? 'api-key') as
+          | 'api-key'
+          | 'claude-passthrough'
+          | 'codex-passthrough'
+          | 'droid-passthrough',
         sourcePath: acc.sourcePath ?? null,
         needsReauthAt: acc.needsReauthAt?.toISOString() ?? null,
         expectedEmail: acc.expectedEmail ?? null,

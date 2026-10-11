@@ -2,3 +2,5 @@
 export { ConnectClaudeAccountPage } from './connect-claude-account-page';
 // Used by Settings → Add Account → Codex passthrough flow (dark behind LAUNCH_FLAGS.codexAccounts).
 export { ConnectCodexAccountPage } from './connect-codex-account-page';
+// Used by Settings → Add Account → Droid passthrough flow (dark behind LAUNCH_FLAGS.droidAccounts).
+export { ConnectDroidAccountPage } from './ConnectDroidAccountPage';

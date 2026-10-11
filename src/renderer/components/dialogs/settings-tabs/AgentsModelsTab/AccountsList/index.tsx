@@ -35,6 +35,7 @@ type Props = {
   hasClaudePassthrough?: boolean;
   /** This device already has its one Codex login, so the Add menu omits that choice. */
   hasCodexPassthrough?: boolean;
+  hasDroidPassthrough?: boolean;
   /** listAccounts failed after fetch; rows below may be stale cache. */
   accountsListFailed?: boolean;
 };
@@ -45,6 +46,7 @@ export function AccountsList({
   refetchAccounts,
   hasClaudePassthrough,
   hasCodexPassthrough,
+  hasDroidPassthrough,
   accountsListFailed = false,
 }: Props): ReactElement {
   const [showAddForm, setShowAddForm] = useState(false);
@@ -169,7 +171,7 @@ export function AccountsList({
     addAccountMutation.mutate({ label, token: apiKey, isApiKey: true });
   };
 
-  const startSignIn = (provider?: 'codex') => {
+  const startSignIn = (provider?: 'codex' | 'droid') => {
     setPendingAccountAuth(buildPendingAddState(provider));
     setSettingsOpen(false);
   };
@@ -232,6 +234,7 @@ export function AccountsList({
           withBorder={accounts.length > 0}
           canSignInClaude={!isWindows() && !hasClaudePassthrough}
           canSignInCodex={LAUNCH_FLAGS.codexAccounts && !hasCodexPassthrough}
+          canSignInDroid={LAUNCH_FLAGS.droidAccounts && !hasDroidPassthrough}
           onSignIn={startSignIn}
           onAddKey={() => setShowAddForm(true)}
         />
@@ -249,6 +252,7 @@ function AddAccountMenu({
   withBorder,
   canSignInClaude,
   canSignInCodex,
+  canSignInDroid,
   onSignIn,
   onAddKey,
 }: {
@@ -256,7 +260,8 @@ function AddAccountMenu({
   withBorder: boolean;
   canSignInClaude: boolean;
   canSignInCodex: boolean;
-  onSignIn: (provider?: 'codex') => void;
+  canSignInDroid: boolean;
+  onSignIn: (provider?: 'codex' | 'droid') => void;
   onAddKey: () => void;
 }): ReactElement {
   const trigger = (
@@ -264,7 +269,7 @@ function AddAccountMenu({
       ref={triggerRef}
       type="button"
       className={ADD_ROW_CLASS}
-      onClick={canSignInClaude || canSignInCodex ? undefined : onAddKey}
+      onClick={canSignInClaude || canSignInCodex || canSignInDroid ? undefined : onAddKey}
     >
       <span className="flex size-9 items-center justify-center rounded-[10px] border border-dashed border-border">
         <Plus className="size-4" aria-hidden />
@@ -274,7 +279,7 @@ function AddAccountMenu({
   );
   return (
     <div className={withBorder ? 'border-t border-border/50' : undefined}>
-      {canSignInClaude || canSignInCodex ? (
+      {canSignInClaude || canSignInCodex || canSignInDroid ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-64">
@@ -292,6 +297,12 @@ function AddAccountMenu({
               <DropdownMenuItem onClick={() => onSignIn('codex')}>
                 <ProviderTile type="codex" size="sm" />
                 Sign in with OpenAI
+              </DropdownMenuItem>
+            ) : null}
+            {canSignInDroid ? (
+              <DropdownMenuItem onClick={() => onSignIn('droid')}>
+                <ProviderTile type="droid" size="sm" />
+                Sign in with Factory
               </DropdownMenuItem>
             ) : null}
           </DropdownMenuContent>

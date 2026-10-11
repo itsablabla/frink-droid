@@ -31,6 +31,7 @@ import {
   sanitizeError,
 } from './detect';
 import { CODEX_KEYCHAIN_SERVICE, codexKeyringAccount, resolveCodexHome } from './detect-codex';
+import { droidAuthFilePath } from './detect-droid';
 import { KEYCHAIN_READ_TIMEOUT_MS } from './keychain-shared';
 
 // Promisified, non-blocking. Returning a Promise lets the event loop continue
@@ -88,6 +89,18 @@ export async function probeCodexPassthroughSource(): Promise<ProbeResult> {
   // EACCES/EMFILE etc. say nothing about the login — transient, never a logout.
   if (authFile === 'unreadable') return { error: 'denied', detail: 'auth.json is unreadable' };
   return probeDarwinKeychainItem(CODEX_KEYCHAIN_SERVICE, codexKeyringAccount(codexHome));
+}
+
+/** Droid login presence: `$FACTORY_HOME/auth.json` (the `droid` CLI owns the file). */
+export async function probeDroidPassthroughSource(): Promise<ProbeResult> {
+  const authFile = await access(droidAuthFilePath()).then(
+    () => 'present' as const,
+    (error: { code?: string }) => (error.code === 'ENOENT' ? 'absent' : 'unreadable'),
+  );
+  if (authFile === 'present') return { ok: true };
+  // EACCES/EMFILE etc. say nothing about the login — transient, never a logout.
+  if (authFile === 'unreadable') return { error: 'denied', detail: 'auth.json is unreadable' };
+  return { error: 'missing', detail: 'no droid auth.json on this machine' };
 }
 
 // Pre-sc-3807 keyring row: the CLI reads only the credentials file on Linux, and secret-tool

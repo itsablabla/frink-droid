@@ -33,11 +33,14 @@ export function AgentsModelsTab(): ReactElement {
   );
   // One Codex login per device — mirrors hasClaudePassthrough for the Codex connect CTA.
   const hasCodexPassthrough = accountRows.some((account) => account.source === 'codex-passthrough');
+  // One Droid login per device — same single-source auth shape as Codex.
+  const hasDroidPassthrough = accountRows.some((account) => account.source === 'droid-passthrough');
 
   const authGateReady = accountsQuerySuccess;
   const accountsListFailed = accountsQueryFetched && accountsQueryError;
   const showClaudeModels = accountRows.some((a) => a.type === 'claude-code' && a.isAuthenticated);
   const showCodexModels = accountRows.some((a) => a.type === 'codex' && a.isAuthenticated);
+  const showDroidModels = accountRows.some((a) => a.type === 'droid' && a.isAuthenticated);
 
   const handleAuthenticate = (account: AccountAuthSelection) => {
     setPendingAccountAuth(buildPendingReauthState(account));
@@ -62,6 +65,7 @@ export function AgentsModelsTab(): ReactElement {
           refetchAccounts={refetchAccounts}
           hasClaudePassthrough={hasClaudePassthrough}
           hasCodexPassthrough={hasCodexPassthrough}
+          hasDroidPassthrough={hasDroidPassthrough}
           accountsListFailed={accountsListFailed}
         />
       </SettingsSection>
@@ -74,6 +78,7 @@ export function AgentsModelsTab(): ReactElement {
           authGateReady={authGateReady}
           showClaudeModels={showClaudeModels}
           showCodexModels={showCodexModels}
+          showDroidModels={showDroidModels}
           accountsListFailed={accountsListFailed}
           onRetryAccounts={refetchAccounts}
         />

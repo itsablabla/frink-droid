@@ -11,7 +11,7 @@ import {
   supportsNativeAutoReview,
 } from './models';
 
-export type ExecutionAccountKind = 'claude-code' | 'codex';
+export type ExecutionAccountKind = 'claude-code' | 'codex' | 'droid';
 
 export type ComposerSettings = {
   /** Raw picker id (effort tier included). Never normalized on store: an account flip must not
@@ -46,15 +46,15 @@ export function resolveComposerSettings(
 
 /**
  * Maps a picker model id to the execution `settings.model` string (Claude Code: opus|sonnet|haiku;
- * Codex: picker id forwarded RAW).
+ * Codex and Droid: picker id forwarded RAW).
  */
 export function resolveExecutionModelCliString(
   accountType: ExecutionAccountKind,
   selectedModelId: string,
 ): string {
-  if (accountType === 'codex') {
-    // Forwarded RAW: resolveCodexCliModel is the single split point for slug + effort
-    // (docs/decisions model-id-execution-namespace).
+  if (accountType === 'codex' || accountType === 'droid') {
+    // Forwarded RAW: resolveCodexCliModel / resolveDroidCliModel are the single split points
+    // for slug resolution (docs/decisions model-id-execution-namespace).
     return selectedModelId;
   }
   return getClaudeCliModel(selectedModelId);

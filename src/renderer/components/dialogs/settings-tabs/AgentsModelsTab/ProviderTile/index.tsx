@@ -1,5 +1,6 @@
 import claudeLogo from '@iconify-icons/simple-icons/claude';
 import openaiLogo from '@iconify-icons/ri/openai-fill';
+import robotLogo from '@iconify-icons/ri/robot-2-fill';
 import type { ReactElement } from 'react';
 import { cn } from '@/lib/utils';
 import { iconifyComponent } from '@/lib/utils/iconify-component';
@@ -7,11 +8,19 @@ import type { AccountType } from '../auth-flow-utils';
 
 const ClaudeMark = iconifyComponent(claudeLogo);
 const OpenAiMark = iconifyComponent(openaiLogo);
+const DroidMark = iconifyComponent(robotLogo);
 
 export const PROVIDER_NAME = {
   'claude-code': 'Claude',
   codex: 'OpenAI',
+  droid: 'Factory',
 } satisfies Record<AccountType, string>;
+
+function markFor(type: AccountType) {
+  if (type === 'codex') return OpenAiMark;
+  if (type === 'droid') return DroidMark;
+  return ClaudeMark;
+}
 
 /** The provider's mark on its own brand colour, matching the connect pages' tiles. */
 export function ProviderTile({
@@ -21,7 +30,7 @@ export function ProviderTile({
   type: AccountType;
   size?: 'sm' | 'md';
 }): ReactElement {
-  const Mark = type === 'codex' ? OpenAiMark : ClaudeMark;
+  const Mark = markFor(type);
   return (
     <span
       aria-hidden
@@ -30,7 +39,9 @@ export function ProviderTile({
         // The white Codex tile needs a dark rim to keep its edge on light cards.
         type === 'codex'
           ? 'bg-white text-black shadow-[inset_0_0_0_1px_rgb(0_0_0/0.12)]'
-          : 'bg-[#D97757] text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/0.14)]',
+          : type === 'droid'
+            ? 'bg-black text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/0.14)]'
+            : 'bg-[#D97757] text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/0.14)]',
         size === 'md' ? 'size-9 rounded-[10px]' : 'size-5 rounded-[5px]',
       )}
     >
@@ -41,6 +52,6 @@ export function ProviderTile({
 
 /** The provider's bare mark, for inline use in a button: Claude in its brand colour, OpenAI in ink. */
 export function ProviderMark({ type }: { type: AccountType }): ReactElement {
-  const Mark = type === 'codex' ? OpenAiMark : ClaudeMark;
+  const Mark = markFor(type);
   return <Mark className={cn('size-3.5 shrink-0', type === 'claude-code' && 'text-[#D97757]')} />;
 }

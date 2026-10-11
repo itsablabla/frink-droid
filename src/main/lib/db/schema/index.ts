@@ -129,7 +129,7 @@ export const subChatsRelations = relations(subChats, ({ one }) => ({
 }));
 
 // ============ AI ACCOUNT TYPES ============
-export type AIAccountType = 'claude-code' | 'codex';
+export type AIAccountType = 'claude-code' | 'codex' | 'droid';
 
 /**
  * Distinguishes how a credential row resolves its token at chat-time.
@@ -138,8 +138,14 @@ export type AIAccountType = 'claude-code' | 'codex';
  *   at every use. ONE row per machine. LOCAL-ONLY — never enqueued to `pendingAccountSyncs`.
  * - `codex-passthrough`: `oauth_token IS NULL`. The OpenAI Codex CLI owns its creds (OS keyring / `~/.codex`
  *   from `codex login`); Frink never stores an OpenAI key. Resolved live at spawn. LOCAL-ONLY.
+ * - `droid-passthrough`: `oauth_token IS NULL`. The Factory Droid CLI owns its creds (`~/.factory`
+ *   from `droid` sign-in); Frink never stores a Factory key. Resolved live at spawn. LOCAL-ONLY.
  */
-export type CredentialSource = 'api-key' | 'claude-passthrough' | 'codex-passthrough';
+export type CredentialSource =
+  | 'api-key'
+  | 'claude-passthrough'
+  | 'codex-passthrough'
+  | 'droid-passthrough';
 
 // ============ AGENT-PROVIDER CREDENTIALS (AI ACCOUNTS) ============
 // SHARED across all coding-agent providers (Claude Code, OpenAI Codex). The table

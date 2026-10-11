@@ -95,7 +95,7 @@ type Props = {
   /** After getResolvedAccount succeeded for this chat — required before direct sends (not queued). */
   isResolvedExecutionAccountReady: boolean;
   /** Set when the resolved account exists but is not authenticated — used to route the toast action. */
-  unauthAccount?: { label: string; type: 'claude-code' | 'codex' } | null;
+  unauthAccount?: { label: string; type: 'claude-code' | 'codex' | 'droid' } | null;
 };
 
 export function useMessageSend({

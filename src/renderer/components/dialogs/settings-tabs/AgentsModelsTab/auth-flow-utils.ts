@@ -1,4 +1,4 @@
-export type AccountType = 'claude-code' | 'codex';
+export type AccountType = 'claude-code' | 'codex' | 'droid';
 
 export type AccountAuthSelection = {
   id: string;
@@ -17,15 +17,17 @@ export function shouldUseInlineCredentialEdit(account: {
 
 /**
  * Which connect page a passthrough row routes to. A codex row (type `'codex'` or
- * source `'codex-passthrough'`) opens the Codex connect page; everything else
- * defaults to Claude. Returns `undefined` for the non-codex case so the field is
- * omitted (the App.tsx gate treats absent as Claude).
+ * source `'codex-passthrough'`) opens the Codex connect page; a droid row the Droid
+ * connect page; everything else defaults to Claude. Returns `undefined` for the
+ * non-codex/droid case so the field is omitted (the App.tsx gate treats absent as Claude).
  */
 export function providerForAccount(account: {
   type?: AccountType;
   source?: string | null;
-}): 'codex' | undefined {
-  return account.type === 'codex' || account.source === 'codex-passthrough' ? 'codex' : undefined;
+}): 'codex' | 'droid' | undefined {
+  if (account.type === 'codex' || account.source === 'codex-passthrough') return 'codex';
+  if (account.type === 'droid' || account.source === 'droid-passthrough') return 'droid';
+  return undefined;
 }
 
 export function buildPendingReauthState(account: {
@@ -44,7 +46,7 @@ export function buildPendingReauthState(account: {
 }
 
 /** No label: the connect page names the account after the login it detects. */
-export function buildPendingAddState(provider?: 'codex') {
+export function buildPendingAddState(provider?: 'codex' | 'droid') {
   return {
     accountLabel: '',
     mode: 'add' as const,
