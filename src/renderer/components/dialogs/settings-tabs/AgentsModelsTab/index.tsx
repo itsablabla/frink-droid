@@ -33,6 +33,8 @@ export function AgentsModelsTab(): ReactElement {
   );
   // One Codex login per device — mirrors hasClaudePassthrough for the Codex connect CTA.
   const hasCodexPassthrough = accountRows.some((account) => account.source === 'codex-passthrough');
+  // One Droid login per device — same single-source auth shape as Codex.
+  const hasDroidPassthrough = accountRows.some((account) => account.source === 'droid-passthrough');
 
   const authGateReady = accountsQuerySuccess;
   const accountsListFailed = accountsQueryFetched && accountsQueryError;
@@ -63,6 +65,7 @@ export function AgentsModelsTab(): ReactElement {
           refetchAccounts={refetchAccounts}
           hasClaudePassthrough={hasClaudePassthrough}
           hasCodexPassthrough={hasCodexPassthrough}
+          hasDroidPassthrough={hasDroidPassthrough}
           accountsListFailed={accountsListFailed}
         />
       </SettingsSection>

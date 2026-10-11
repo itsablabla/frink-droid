@@ -805,7 +805,11 @@ export const claudeCodeRouter = router({
       if (!row) {
         throw new Error(`Account "${input.accountId}" not found`);
       }
-      if (row.source !== 'claude-passthrough' && row.source !== 'codex-passthrough' && row.source !== 'droid-passthrough') {
+      if (
+        row.source !== 'claude-passthrough' &&
+        row.source !== 'codex-passthrough' &&
+        row.source !== 'droid-passthrough'
+      ) {
         throw new Error(
           'disconnectClaudePassthrough only handles passthrough rows (claude/codex/droid). Use the regular delete endpoint for API-key accounts.',
         );
@@ -855,7 +859,11 @@ export const claudeCodeRouter = router({
         type: accountType,
         // Narrow the TEXT column to the runtime union at the boundary so the
         // renderer can branch on `source` without re-narrowing every render.
-        source: (acc.source ?? 'api-key') as 'api-key' | 'claude-passthrough' | 'codex-passthrough',
+        source: (acc.source ?? 'api-key') as
+          | 'api-key'
+          | 'claude-passthrough'
+          | 'codex-passthrough'
+          | 'droid-passthrough',
         sourcePath: acc.sourcePath ?? null,
         needsReauthAt: acc.needsReauthAt?.toISOString() ?? null,
         expectedEmail: acc.expectedEmail ?? null,

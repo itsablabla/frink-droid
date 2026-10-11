@@ -684,6 +684,21 @@ export async function handleRemoteExecute(payload: ExecuteRequestPayload): Promi
       }
     }
 
+    // Droid execution hasn't shipped yet (Phase 2 of the droid integration).
+    // Without this gate a droid row would silently fall into the claude runtime
+    // below and fail deep inside the SDK — error cleanly at the boundary instead.
+    if (storedCredential.type === 'droid') {
+      log.error('[Socket Executor] Droid execution is not yet supported');
+      sendRunErrorDirect({
+        chatId,
+        subChatId,
+        assistantMessageId: msgId,
+        error:
+          'Factory Droid execution isn’t available yet. Switch this chat to a Claude Code or Codex account.',
+      });
+      return;
+    }
+
     const agentRuntime: 'codex' | 'claude' = storedCredential.type === 'codex' ? 'codex' : 'claude';
     const autoReviewRequested = settings?.autoReviewTools === true;
     const autoReviewSupported = isAutoReviewSupported(settings, storedCredential.type);

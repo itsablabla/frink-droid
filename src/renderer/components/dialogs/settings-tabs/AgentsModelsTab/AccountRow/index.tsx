@@ -32,7 +32,7 @@ type Props = {
      * live only on this device — deleting them must NOT tombstone the
      * (cloud-shared) account on other machines. See `AccountsList.handleDelete`.
      */
-    source?: 'api-key' | 'claude-passthrough' | 'codex-passthrough';
+    source?: 'api-key' | 'claude-passthrough' | 'codex-passthrough' | 'droid-passthrough';
   };
   isEditing?: boolean;
   isEditingRename?: boolean;

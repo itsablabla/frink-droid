@@ -114,7 +114,9 @@ export async function readMobileComposer(input: ComposerRequest): Promise<Mobile
     autoUnavailableReason: getAutoModeUnavailableReason({
       accountResolved: true,
       isAuthenticated: account?.isAuthenticated,
-      accountType: account?.type === 'codex' ? 'codex' : account ? 'claude-code' : undefined,
+      // Pass the real type through: 'droid' (and anything unknown) correctly reads
+      // as no-native-auto-review instead of masquerading as claude-code.
+      accountType: account?.type,
       selectedModelId: modelId,
     }),
     codexSpeedCredits: {

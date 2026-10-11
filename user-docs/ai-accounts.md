@@ -13,6 +13,8 @@ That's it. **Frink never reads or stores your token.** It only checks that the s
 
 Every AI account belongs to this computer — Claude and OpenAI sign-ins and API-key accounts alike.
 
+> **Coming soon — Factory Droid.** Frink is adding Factory's Droid CLI as a third provider, using the same passthrough model: install the `droid` CLI, sign in with `droid`, and connect it from Settings → AI providers. Frink never stores a Factory token. This is still being rolled out and may not be visible in your build yet.
+
 ### API key
 
 If you'd rather keep credentials inside Frink, paste an Anthropic API key (`sk-ant-api…`) under Settings → AI providers → **Add an account** → **Add a Claude API key**. The name is optional (it defaults to "Claude API key", then "Claude API key 2" and so on). The key is encrypted with `safeStorage` (macOS Keychain, libsecret on Linux) and stays on this machine. Paste it again on another machine to use it there.

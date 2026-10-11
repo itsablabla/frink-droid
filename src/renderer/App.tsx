@@ -47,6 +47,10 @@ const ConnectClaudeAccountPage: LazyPage = lazy(() =>
 const ConnectCodexAccountPage: LazyPage = lazy(() =>
   import('./features/onboarding').then((m) => ({ default: m.ConnectCodexAccountPage })),
 );
+// ConnectDroidAccountPage used by Settings → Connect Droid (dark behind LAUNCH_FLAGS.droidAccounts).
+const ConnectDroidAccountPage: LazyPage = lazy(() =>
+  import('./features/onboarding').then((m) => ({ default: m.ConnectDroidAccountPage })),
+);
 
 // Loading fallback for lazy components.
 // Shares .loading-atmosphere with the HTML bootstrap loader so there's no style
@@ -221,6 +225,8 @@ const AppContent = memo(function AppContent() {
       <Suspense fallback={<PageLoader />}>
         {pendingAccountAuth.provider === 'codex' ? (
           <ConnectCodexAccountPage />
+        ) : pendingAccountAuth.provider === 'droid' ? (
+          <ConnectDroidAccountPage />
         ) : (
           <ConnectClaudeAccountPage />
         )}
