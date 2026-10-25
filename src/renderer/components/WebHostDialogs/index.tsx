@@ -8,7 +8,7 @@ import { type ReactElement, useCallback, useEffect, useState } from 'react';
 import type { WebHostDirectoryListing, WebHostServerRequest } from '../../../shared/lib/web-host';
 import { getWebBridge, isWebHost } from '../../lib/web-host/install';
 import { type PendingWebRequest, webHostRequests } from '../../lib/web-host/requests';
-import { WebSessionBar } from './web-session-bar';
+import { WebSessionBar } from '../WebSessionBar';
 import {
   Dialog,
   DialogContent,
