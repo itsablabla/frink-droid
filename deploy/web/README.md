@@ -25,6 +25,7 @@ docker buildx build --platform linux/amd64 -f deploy/web/Dockerfile -t <registry
 | `FRINK_WEB_ROOTS` | preset `/workspace` | Folders the browser folder picker may open |
 | `FRINK_WEB_MAX_FLOW_RUNS` | no | Seeds Settings → Flows "max runs at once" on first boot only. Use `1` on a 2 GB plan |
 | `FRINK_WEB_MAX_HEAP_MB` | no | Caps the main process JS heap |
+| `FRINK_WEB_OPENCODE_PROVIDERS` | no | OpenAI-compatible model providers for OpenCode, as JSON: `{"model":"id/model","providers":{"<id>":{"name","baseURL","models":[...],"apiKey"}}}`. Seeded at each start into `~/.frink/opencode/providers.json` (no keys) and OpenCode's sign-in store, then removed from the environment |
 
 ## Hostim (2 GB plan)
 

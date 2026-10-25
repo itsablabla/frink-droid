@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { frinkUserHome } from '../../../platform/frink-home';
 import type { AcpLaunchRow, LaunchCheck, LaunchContext } from './launch';
 import { instructionFiles, OPENCODE_LAUNCH, PERMISSION, skillPaths } from './opencode';
+import { openCodeProviders } from './opencode-providers';
 
 /** OpenCode 2's names for the tools OpenCode 1.19 calls `bash` and `task`. */
 const RENAMED = new Map([
@@ -100,6 +101,7 @@ async function openCode2Settings(context: LaunchContext) {
     lsp: false,
     shell: context.shellGate,
     skills: await skillPaths(context),
+    ...(await openCodeProviders()),
   };
   const configDir = path.join(context.dirs.config, 'opencode');
   await mkdir(configDir, { recursive: true, mode: 0o700 });

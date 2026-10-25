@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { AI_PROVIDERS } from '../../../../../shared/lib/ai-providers';
 import { ENV_FILE_READS } from '../../env-file-reads';
 import type { AcpLaunchRow, LaunchCheck, LaunchContext } from './launch';
+import { openCodeProviders } from './opencode-providers';
 
 /**
  * Every tool asks, except tools that only read; environment files still ask. Each risky tool is
@@ -95,6 +96,8 @@ async function openCodeSettings(context: LaunchContext) {
     shell: context.shellGate,
     instructions: await instructionFiles(context),
     skills: { paths: await skillPaths(context) },
+    // The person's own model providers; their keys stay in OpenCode's sign-in store.
+    ...(await openCodeProviders()),
   };
   // Language servers, formatters and providers run code outside the shell gate, so any key the
   // launch did not set refuses. Only the user name, a display default, may differ.

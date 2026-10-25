@@ -53,6 +53,13 @@ if [[ -n "$max_runs" && ! -e "$flows_config" ]]; then
     "$max_runs" > "$flows_config")
 fi
 
+# Optional OpenCode model providers (with keys) from the platform's env. They are written to the
+# volume's private stores, then removed from the environment so no agent or command sees them.
+if [[ -n "${FRINK_WEB_OPENCODE_PROVIDERS:-}" ]]; then
+  /opt/node22/bin/node /usr/local/lib/frink-web/seed-opencode.mjs
+fi
+unset FRINK_WEB_OPENCODE_PROVIDERS
+
 # Optional cap on the main process's JS heap (MB), for small plans.
 heap_flag=()
 if [[ -n "${FRINK_WEB_MAX_HEAP_MB:-}" ]]; then
