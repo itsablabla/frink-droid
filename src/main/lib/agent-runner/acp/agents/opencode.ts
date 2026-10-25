@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { AI_PROVIDERS } from '../../../../../shared/lib/ai-providers';
 import { ENV_FILE_READS } from '../../env-file-reads';
 import type { AcpLaunchRow, LaunchCheck, LaunchContext } from './launch';
-import { openCodeProviders } from './opencode-providers';
+import { openCodePrompt, openCodeProviders } from './opencode-providers';
 
 /**
  * Every tool asks, except tools that only read; environment files still ask. Each risky tool is
@@ -79,12 +79,15 @@ export async function skillPaths({ userEnv }: LaunchContext): Promise<string[]> 
 }
 
 async function openCodeSettings(context: LaunchContext) {
+  // Replaces OpenCode's built-in prompt, which asks for answers of a few words, when one is set.
+  const prompt = await openCodePrompt();
+  const withPrompt: { prompt?: string } = prompt === undefined ? {} : { prompt };
   const config = {
     permission: PERMISSION,
     // OpenCode reports each agent with empty options, so they are written out to compare equal.
     agent: {
-      build: { permission: PERMISSION, options: {} },
-      plan: { permission: { ...PERMISSION, edit: 'deny' }, options: {} },
+      build: { permission: PERMISSION, options: {}, ...withPrompt },
+      plan: { permission: { ...PERMISSION, edit: 'deny' }, options: {}, ...withPrompt },
     },
     default_agent: 'build',
     share: 'disabled',

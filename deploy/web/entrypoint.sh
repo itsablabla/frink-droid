@@ -60,6 +60,18 @@ if [[ -n "${FRINK_WEB_OPENCODE_PROVIDERS:-}" ]]; then
 fi
 unset FRINK_WEB_OPENCODE_PROVIDERS
 
+# OpenCode's built-in system prompt tells models to answer in a few words. Frink gives its agents
+# this prompt instead: FRINK_WEB_OPENCODE_PROMPT when set, otherwise the one shipped in the image.
+# Set FRINK_WEB_OPENCODE_PROMPT=default to keep OpenCode's own. Rewritten at each start.
+opencode_prompt_file="$HOME/.frink/opencode/prompt.md"
+mkdir -p "$(dirname "$opencode_prompt_file")"
+case "${FRINK_WEB_OPENCODE_PROMPT:-}" in
+  default) rm -f "$opencode_prompt_file" ;;
+  '') (umask 077 && cp /usr/local/lib/frink-web/opencode-prompt.md "$opencode_prompt_file") ;;
+  *) (umask 077 && printf '%s\n' "$FRINK_WEB_OPENCODE_PROMPT" > "$opencode_prompt_file") ;;
+esac
+unset FRINK_WEB_OPENCODE_PROMPT
+
 # Optional cap on the main process's JS heap (MB), for small plans.
 heap_flag=()
 if [[ -n "${FRINK_WEB_MAX_HEAP_MB:-}" ]]; then

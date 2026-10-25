@@ -42,6 +42,31 @@ export function providersFile(): string {
   return path.join(frinkUserHome(), '.frink', 'opencode', 'providers.json');
 }
 
+export function promptFile(): string {
+  return path.join(frinkUserHome(), '.frink', 'opencode', 'prompt.md');
+}
+
+const MAX_PROMPT_LENGTH = 32_000;
+
+/**
+ * The system prompt to use instead of OpenCode's built-in one, which tells models to answer in a
+ * few words. Undefined (OpenCode's own) when the file is absent, empty, or too long.
+ */
+export async function openCodePrompt(file = promptFile()): Promise<string | undefined> {
+  let text: string;
+  try {
+    text = (await readFile(file, 'utf8')).trim();
+  } catch {
+    return undefined;
+  }
+  if (text.length === 0) return undefined;
+  if (text.length > MAX_PROMPT_LENGTH) {
+    log.warn('[ACP] Ignoring OpenCode prompt file over the length limit', file);
+    return undefined;
+  }
+  return text;
+}
+
 /** The settings to add for the configured providers; none when the file is absent or invalid. */
 export async function openCodeProviders(file = providersFile()): Promise<OpenCodeProviders> {
   let text: string;

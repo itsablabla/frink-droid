@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { openCodeProviders } from './opencode-providers';
+import { openCodePrompt, openCodeProviders } from './opencode-providers';
 
 vi.mock('electron-log', () => ({ default: { warn: vi.fn() } }));
 
@@ -70,5 +70,32 @@ describe('OpenCode providers file', () => {
   it('ignores a file that is not JSON', async () => {
     await writeFile(file, 'not json');
     expect(await openCodeProviders(file)).toEqual({});
+  });
+});
+
+describe('OpenCode prompt file', () => {
+  let dir: string;
+  let file: string;
+  beforeEach(async () => {
+    dir = await mkdtemp(path.join(os.tmpdir(), 'oc-prompt-'));
+    file = path.join(dir, 'prompt.md');
+  });
+  afterEach(() => rm(dir, { recursive: true, force: true }));
+
+  it("keeps OpenCode's own prompt when there is no file", async () => {
+    expect(await openCodePrompt(file)).toBeUndefined();
+  });
+
+  it('uses the file, trimmed', async () => {
+    await writeFile(file, '\n  Answer fully.\n\n');
+    expect(await openCodePrompt(file)).toBe('Answer fully.');
+  });
+
+  it.each([
+    ['empty', '  \n'],
+    ['over the length limit', 'x'.repeat(32_001)],
+  ])("keeps OpenCode's own prompt when the file is %s", async (_, text) => {
+    await writeFile(file, text);
+    expect(await openCodePrompt(file)).toBeUndefined();
   });
 });

@@ -47,6 +47,7 @@ RUN groupadd -o -g 20 frink && useradd -m -u 501 -g 20 -o -s /bin/bash frink \
  && mkdir -p /workspace /home/frink/.config && chown -R frink:frink /workspace /home/frink
 COPY deploy/web/entrypoint.sh /usr/local/bin/frink-web
 COPY deploy/web/seed-opencode.mjs /usr/local/lib/frink-web/seed-opencode.mjs
+COPY deploy/web/opencode-prompt.md /usr/local/lib/frink-web/opencode-prompt.md
 RUN chmod 0755 /usr/local/bin/frink-web
 
 # Starts as root only to hand freshly mounted volumes to frink, then drops privileges
