@@ -37,7 +37,12 @@ export type LaunchCheck = {
 };
 
 /** The agent's settings for one launch, and the checks that its effective settings still hold them. */
-type LaunchSettings = { env: Env; checks: readonly LaunchCheck[] };
+type LaunchSettings = {
+  env: Env;
+  checks: readonly LaunchCheck[];
+  /** MCP servers this launch adds, whose tools then ask Frink's rules by name. */
+  mcpServers?: readonly string[];
+};
 
 /** How Frink starts one agent so that it asks before it acts. */
 export type AcpLaunchRow = {
@@ -345,7 +350,10 @@ export async function launchFromRows(
       await cleanup();
       return { ok: false, reason };
     }
-    const { rules, signInHint } = row;
+    const { signInHint } = row;
+    const rules = settings.mcpServers?.length
+      ? { ...row.rules, mcpServers: [...settings.mcpServers] }
+      : row.rules;
     const launch = { command, args: [...row.args], env: launchEnv, rules, signInHint };
     return { ok: true, launch: { ...launch, commandLedger: dirs.ledger, cleanup } };
   } catch (error) {

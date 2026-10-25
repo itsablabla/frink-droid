@@ -108,6 +108,64 @@ describe('permission requests recorded from a real agent', () => {
   });
 });
 
+describe('tools of an MCP server the launch added', () => {
+  const MCP_RULES = { ...TEST_RULES, mcpServers: ['executor'] };
+
+  async function askWith(rules: typeof TEST_RULES, title: string, rawInput: unknown = {}) {
+    const { asked, checkApproval } = gate(() => ({ allowed: true }));
+    let outcome: RequestPermissionOutcome | undefined;
+    // Recorded from OpenCode 1.19: the call is named `<server>_<tool>`, of kind other, with no input yet.
+    const toolCall = { toolCallId: 'm1', kind: 'other' as ToolKind, title, rawInput };
+    const fake = fakeAcpAgent(async ({ client, sessionId }) => {
+      await client.notify('session/update', {
+        sessionId,
+        update: { sessionUpdate: 'tool_call', status: 'pending', ...toolCall },
+      });
+      const answer = await client.request('session/request_permission', {
+        sessionId,
+        toolCall: { ...toolCall, status: 'pending' },
+        options: RECORDED_OPTIONS,
+      });
+      outcome = answer.outcome;
+    });
+    const launch = { command: 'fake-agent', args: ['acp'], env: {}, rules };
+    await collectChunks(runAcpAgent(runnerParams({ checkApproval, launch }), fake.start));
+    return { asked, outcome };
+  }
+
+  it('asks about the tool by its MCP name and allows it once', async () => {
+    const { asked, outcome } = await askWith(MCP_RULES, 'executor_execute');
+    expect(asked).toEqual([
+      {
+        toolName: 'mcp__executor__execute',
+        input: {},
+        reason: 'executor_execute',
+        mcp: { server: 'executor', tool: 'execute' },
+      },
+    ]);
+    expect(outcome).toEqual(ALLOW_ONCE);
+  });
+
+  it('passes on the input the call carries', async () => {
+    const { asked } = await askWith(MCP_RULES, 'executor_execute', { code: 'return 1' });
+    expect(asked[0]?.input).toEqual({ code: 'return 1' });
+  });
+
+  it('keeps the rest of the name as the tool when it holds underscores', async () => {
+    const { asked } = await askWith(MCP_RULES, 'executor_list_chats');
+    expect(asked[0]?.mcp).toEqual({ server: 'executor', tool: 'list_chats' });
+  });
+
+  it.each([
+    ['a server the launch did not add', 'other_execute', MCP_RULES],
+    ['a launch that added no server', 'executor_execute', TEST_RULES],
+  ])('refuses a tool of %s without asking', async (_, title, rules) => {
+    const { asked, outcome } = await askWith(rules, title);
+    expect(asked).toEqual([]);
+    expect(outcome).toEqual(REJECT_ONCE);
+  });
+});
+
 describe('what the permission gate is asked', () => {
   it('uses what earlier updates said when the request names only the call', async () => {
     const { asked, checkApproval } = gate(() => ({ allowed: true }));

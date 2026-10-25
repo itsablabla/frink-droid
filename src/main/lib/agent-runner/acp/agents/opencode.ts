@@ -5,7 +5,12 @@ import { z } from 'zod';
 import { AI_PROVIDERS } from '../../../../../shared/lib/ai-providers';
 import { ENV_FILE_READS } from '../../env-file-reads';
 import type { AcpLaunchRow, LaunchCheck, LaunchContext } from './launch';
-import { openCodePrompt, openCodeProviders } from './opencode-providers';
+import {
+  maskMcpHeaders,
+  openCodeMcpServers,
+  openCodePrompt,
+  openCodeProviders,
+} from './opencode-providers';
 
 /**
  * Every tool asks, except tools that only read; environment files still ask. Each risky tool is
@@ -82,6 +87,7 @@ async function openCodeSettings(context: LaunchContext) {
   // Replaces OpenCode's built-in prompt, which asks for answers of a few words, when one is set.
   const prompt = await openCodePrompt();
   const withPrompt: { prompt?: string } = prompt === undefined ? {} : { prompt };
+  const { mcp } = await openCodeMcpServers();
   const config = {
     permission: PERMISSION,
     // OpenCode reports each agent with empty options, so they are written out to compare equal.
@@ -101,13 +107,16 @@ async function openCodeSettings(context: LaunchContext) {
     skills: { paths: await skillPaths(context) },
     // The person's own model providers; their keys stay in OpenCode's sign-in store.
     ...(await openCodeProviders()),
+    // Remote MCP servers; each of their tools asks Frink's rules as `mcp__<server>__<tool>`.
+    ...(mcp ? { mcp } : {}),
   };
+  const reported = mcp ? { ...config, mcp: maskMcpHeaders(mcp) } : config;
   // Language servers, formatters and providers run code outside the shell gate, so any key the
   // launch did not set refuses. Only the user name, a display default, may differ.
   const keepsRules = (stdout: string) => {
     const parsed = EffectiveSettings.safeParse(JSON.parse(stdout));
     if (!parsed.success) return false;
-    const expected: Settings = { ...config, ...OPENCODE_ADDS, username: parsed.data.username };
+    const expected: Settings = { ...reported, ...OPENCODE_ADDS, username: parsed.data.username };
     return canonical(parsed.data) === canonical(expected);
   };
   const checks: LaunchCheck[] = [
@@ -126,7 +135,7 @@ async function openCodeSettings(context: LaunchContext) {
     XDG_CONFIG_HOME: context.dirs.config,
     OPENCODE_TEST_HOME: context.dirs.home,
   };
-  return { env, checks };
+  return { env, checks, mcpServers: Object.keys(mcp ?? {}) };
 }
 
 export const OPENCODE_LAUNCH: AcpLaunchRow = {

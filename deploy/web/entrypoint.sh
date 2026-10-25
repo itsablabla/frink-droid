@@ -60,6 +60,15 @@ if [[ -n "${FRINK_WEB_OPENCODE_PROVIDERS:-}" ]]; then
 fi
 unset FRINK_WEB_OPENCODE_PROVIDERS
 
+# Optional remote MCP servers for OpenCode agents, as {"servers":{"<id>":{"url":…,"headers":{…}}}}.
+# Written to the volume's private store, then removed from the environment. Unset keeps the file.
+if [[ -n "${FRINK_WEB_OPENCODE_MCP:-}" ]]; then
+  opencode_mcp_file="$HOME/.frink/opencode/mcp.json"
+  mkdir -p "$(dirname "$opencode_mcp_file")"
+  (umask 077 && printf '%s\n' "$FRINK_WEB_OPENCODE_MCP" > "$opencode_mcp_file")
+fi
+unset FRINK_WEB_OPENCODE_MCP
+
 # OpenCode's built-in system prompt tells models to answer in a few words. Frink gives its agents
 # this prompt instead: FRINK_WEB_OPENCODE_PROMPT when set, otherwise the one shipped in the image.
 # Set FRINK_WEB_OPENCODE_PROMPT=default to keep OpenCode's own. Rewritten at each start.

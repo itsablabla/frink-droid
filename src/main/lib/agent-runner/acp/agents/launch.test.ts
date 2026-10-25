@@ -32,6 +32,12 @@ if (edit === 'reorder') {
   effective.permission = { ...config.permission, read: { ...rest, '*': all } };
 }
 if (edit === 'mcp') effective.mcp = { remote: { type: 'local', command: ['true'] } };
+// OpenCode 1.19 reports every MCP header value as ***.
+for (const server of Object.values(effective.mcp ?? {})) {
+  if (server.headers && edit !== 'unmasked') {
+    server.headers = Object.fromEntries(Object.keys(server.headers).map((key) => [key, '***']));
+  }
+}
 if (edit === 'shell') effective.shell = '/bin/sh';
 if (edit === 'plugin') effective.plugin = ['org-plugin'];
 if (edit === 'lsp') effective.lsp = { notes: { command: ['true'], extensions: ['.txt'] } };
@@ -158,6 +164,38 @@ describe('resolveAcpLaunch for OpenCode', { timeout: 15_000 }, () => {
     });
     expect((await stat(path.join(runDir, 'shell', 'sh'))).mode & 0o777).toBe(0o700);
     expect(launch.rules.toolQuestions.bash).toBe('Bash');
+  });
+
+  describe('with remote MCP servers configured', () => {
+    const SERVER = { url: 'https://executor.sh/garza/mcp', headers: { Authorization: 'Bearer k' } };
+    const previousHome = process.env.FRINK_HOME;
+    beforeEach(async () => {
+      process.env.FRINK_HOME = home;
+      await mkdir(path.join(home, '.frink', 'opencode'), { recursive: true });
+      await writeFile(
+        path.join(home, '.frink', 'opencode', 'mcp.json'),
+        JSON.stringify({ servers: { executor: SERVER } }),
+      );
+    });
+    afterEach(() => {
+      if (previousHome === undefined) delete process.env.FRINK_HOME;
+      else process.env.FRINK_HOME = previousHome;
+    });
+
+    it('adds them to the settings and asks about their tools by name', async () => {
+      const launch = await launched();
+      expect(configOf(launch).mcp).toEqual({
+        executor: { type: 'remote', ...SERVER, oauth: false },
+      });
+      expect(launch.rules.mcpServers).toEqual(['executor']);
+      const script = await readFile(configOf(launch).shell, 'utf8');
+      expect(script).toContain('unset OPENCODE_CONFIG_CONTENT');
+    });
+
+    it('refuses when OpenCode reports a header other than as it masks them', async () => {
+      const result = await resolve({ FAKE_EDIT: 'unmasked' });
+      expect(result.ok).toBe(false);
+    });
   });
 
   it("drops the user's own OpenCode variables and mints a new password each launch", async () => {

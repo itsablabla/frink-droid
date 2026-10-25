@@ -36,6 +36,11 @@ export type AcpAgentRules = {
   ignoredInputKeys: readonly string[];
   /** Tools, by first title, that may finish without asking. */
   quietTools: readonly string[];
+  /**
+   * MCP servers the launch added. Their tools are named `<server>_<tool>`, and each call asks
+   * Frink's rules as `mcp__<server>__<tool>`. A server id holds no underscore.
+   */
+  mcpServers?: readonly string[];
   /** The agent's own input names, where they differ from OpenCode 1.19's. */
   inputNames?: {
     /** Its key for a file path. */
@@ -71,8 +76,31 @@ function commandQuestion(command: string, toolCall: KnownToolCall, cwd: string) 
   return { toolName: 'Bash', input: { command: asked }, reason: toolCall.title ?? undefined };
 }
 
+/** The MCP server and tool a call's first title names, for a server the launch added. */
+export function mcpToolFor(rules: AcpAgentRules, tool: string | undefined) {
+  if (tool === undefined || questionForTool(rules, tool)) return undefined;
+  const split = tool.indexOf('_');
+  if (split <= 0 || split === tool.length - 1) return undefined;
+  const server = tool.slice(0, split);
+  if (!rules.mcpServers?.includes(server)) return undefined;
+  return { server, tool: tool.slice(split + 1) };
+}
+
+/** The question an MCP tool call raises: the tool by name, with whatever input is known. */
+function mcpQuestion(toolCall: KnownToolCall, mcp: { server: string; tool: string }) {
+  const input = toolCall.rawInput;
+  return {
+    toolName: `mcp__${mcp.server}__${mcp.tool}`,
+    input: input && typeof input === 'object' && !Array.isArray(input) ? { ...input } : {},
+    reason: toolCall.title ?? undefined,
+    mcp,
+  };
+}
+
 /** The one question a request of kind other raises, chosen by the tool its call first named. */
 function questionsByTool(toolCall: KnownToolCall, { rules, cwd }: QuestionContext) {
+  const mcp = mcpToolFor(rules, toolCall.tool);
+  if (mcp) return [mcpQuestion(toolCall, mcp)];
   const question = questionForTool(rules, toolCall.tool);
   if (!question) return [];
   const [named, to] = QUESTION_INPUT[question];

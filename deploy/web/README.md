@@ -26,6 +26,7 @@ docker buildx build --platform linux/amd64 -f deploy/web/Dockerfile -t <registry
 | `FRINK_WEB_MAX_FLOW_RUNS` | no | Seeds Settings → Flows "max runs at once" on first boot only. Use `1` on a 2 GB plan |
 | `FRINK_WEB_MAX_HEAP_MB` | no | Caps the main process JS heap |
 | `FRINK_WEB_OPENCODE_PROVIDERS` | no | OpenAI-compatible model providers for OpenCode, as JSON: `{"model":"id/model","providers":{"<id>":{"name","baseURL","models":[...],"apiKey"}}}`. Seeded at each start into `~/.frink/opencode/providers.json` (no keys) and OpenCode's sign-in store, then removed from the environment |
+| `FRINK_WEB_OPENCODE_MCP` | no | Remote MCP servers for OpenCode agents, as JSON: `{"servers":{"<id>":{"url":"https://…","headers":{"Authorization":"Bearer …"}}}}` (ids: lowercase letters, digits and `-`). Written at each start to `~/.frink/opencode/mcp.json`, then removed from the environment. Each tool asks Frink's rules as `mcp__<id>__<tool>`; allow a server with the rule `mcp__<id>__*` |
 | `FRINK_WEB_OPENCODE_PROMPT` | no | System prompt for OpenCode agents, replacing OpenCode's built-in one (which asks for answers of a few words). Unset uses [`opencode-prompt.md`](opencode-prompt.md); `default` keeps OpenCode's own. Written at each start to `~/.frink/opencode/prompt.md` |
 
 ## Hostim (2 GB plan)

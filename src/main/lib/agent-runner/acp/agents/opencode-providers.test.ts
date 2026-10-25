@@ -2,7 +2,12 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { openCodePrompt, openCodeProviders } from './opencode-providers';
+import {
+  maskMcpHeaders,
+  openCodeMcpServers,
+  openCodePrompt,
+  openCodeProviders,
+} from './opencode-providers';
 
 vi.mock('electron-log', () => ({ default: { warn: vi.fn() } }));
 
@@ -70,6 +75,54 @@ describe('OpenCode providers file', () => {
   it('ignores a file that is not JSON', async () => {
     await writeFile(file, 'not json');
     expect(await openCodeProviders(file)).toEqual({});
+  });
+});
+
+describe('OpenCode MCP file', () => {
+  let dir: string;
+  let file: string;
+  beforeEach(async () => {
+    dir = await mkdtemp(path.join(os.tmpdir(), 'oc-mcp-'));
+    file = path.join(dir, 'mcp.json');
+  });
+  afterEach(() => rm(dir, { recursive: true, force: true }));
+
+  const write = (value: unknown) => writeFile(file, JSON.stringify(value));
+  const SERVER = { url: 'https://executor.sh/garza/mcp', headers: { Authorization: 'Bearer k' } };
+
+  it('adds nothing when there is no file', async () => {
+    expect(await openCodeMcpServers(file)).toEqual({});
+  });
+
+  it('turns each server into a remote one without OAuth', async () => {
+    await write({ servers: { executor: SERVER } });
+    expect(await openCodeMcpServers(file)).toEqual({
+      mcp: { executor: { type: 'remote', ...SERVER, oauth: false } },
+    });
+  });
+
+  it('masks every header value the way OpenCode reports it', async () => {
+    await write({ servers: { executor: SERVER, open: { url: 'https://example.com/mcp' } } });
+    const { mcp } = await openCodeMcpServers(file);
+    expect(maskMcpHeaders(mcp)).toEqual({
+      executor: {
+        type: 'remote',
+        url: SERVER.url,
+        headers: { Authorization: '***' },
+        oauth: false,
+      },
+      open: { type: 'remote', url: 'https://example.com/mcp', oauth: false },
+    });
+  });
+
+  it.each([
+    ['an id with an underscore', { servers: { my_server: SERVER } }],
+    ['plain http', { servers: { executor: { ...SERVER, url: 'http://example.com/mcp' } } }],
+    ['a local command', { servers: { executor: { ...SERVER, command: ['sh'] } } }],
+    ['no servers key', { executor: SERVER }],
+  ])('ignores a file with %s', async (_, value) => {
+    await write(value);
+    expect(await openCodeMcpServers(file)).toEqual({});
   });
 });
 
