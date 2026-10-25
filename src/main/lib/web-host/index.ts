@@ -41,6 +41,7 @@ export async function startWebMode(getWindow: () => BrowserWindow | null): Promi
   // Agents, terminals and hooks inherit main's environment: never hand them the sign-in secret.
   delete process.env.FRINK_WEB_PASSWORD;
   delete process.env.FRINK_WEB_PASSWORD_HASH;
+  delete process.env.FRINK_WEB_API_KEY_HASHES;
   const passwordHash =
     config.password.kind === 'hash'
       ? config.password.value

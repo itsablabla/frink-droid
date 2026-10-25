@@ -20,11 +20,13 @@ vi.mock('electron-log', () => ({
 }));
 
 const { hashPassword } = await import('./auth');
+const { generateApiKey, hashApiKey } = await import('./api-keys');
 const { startWebHost } = await import('./server');
 const { readWebHostConfig } = await import('./config');
 const { createAppRouter } = await import('../trpc/routers');
 
 const PASSWORD = 'a long test password';
+const API_KEY = generateApiKey();
 let base: string;
 let origin: string;
 let host: Awaited<ReturnType<typeof startWebHost>>;
@@ -35,6 +37,7 @@ async function startHost() {
     FRINK_WEB_HOST: '127.0.0.1',
     FRINK_WEB_PASSWORD: PASSWORD,
     FRINK_WEB_ROOTS: join(base, 'workspace'),
+    FRINK_WEB_API_KEY_HASHES: hashApiKey(API_KEY),
   });
   if (!config) throw new Error('config');
   // Bind an ephemeral port; allowedOrigins/Hosts are rebuilt for it below.
@@ -217,5 +220,21 @@ describe('web host security', () => {
     let last: Response | undefined;
     for (let i = 0; i < 6; i++) last = await post('/__frink/login', 'password=wrong');
     expect(last?.headers.get('location')).toBe('/__frink/login?error=wait');
+  });
+
+  it('lets scripts call tRPC over HTTP only with a valid API key, never with the session cookie', async () => {
+    // A fresh host: the throttling test above has already locked this client out.
+    await host.close();
+    host = await startHost();
+    const api = (headers: Record<string, string>) =>
+      fetch(`${origin}/__frink/api/trpc/no.such.procedure`, { headers });
+    expect((await api({})).status).toBe(401);
+    expect((await api({ Authorization: 'Bearer frk_wrong' })).status).toBe(401);
+    expect((await api({ Authorization: `Bearer ${generateApiKey()}` })).status).toBe(401);
+    expect((await api({ Cookie: await signIn() })).status).toBe(401);
+    // A valid key reaches the router: an unknown procedure is tRPC's own 404, not the gate's 401.
+    const ok = await api({ Authorization: `Bearer ${API_KEY}` });
+    expect(ok.status).toBe(404);
+    expect(ok.headers.get('cache-control')).toBe('no-store');
   });
 });

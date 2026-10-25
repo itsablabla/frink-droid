@@ -6,6 +6,7 @@
  */
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { Duplex } from 'node:stream';
+import { nodeHTTPRequestHandler } from '@trpc/server/adapters/node-http';
 import { applyWSSHandler } from '@trpc/server/adapters/ws';
 import type { BrowserWindow } from 'electron';
 import log from 'electron-log';
@@ -13,6 +14,7 @@ import superjson from 'superjson';
 import { WebSocketServer, type WebSocket } from 'ws';
 import {
   parseWebHostClientMessage,
+  WEB_HOST_API_TRPC_PATH,
   WEB_HOST_BASE_PATH,
   WEB_HOST_HEALTH_PATH,
   WEB_HOST_LOGIN_PATH,
@@ -38,6 +40,7 @@ import {
   sessionCookieName,
   verifyPassword,
 } from './auth';
+import { bearerToken, isValidApiKey } from './api-keys';
 import { invokeFromTab, releaseTabResources, sendFromTab } from './bridge';
 import { isValidTabId, type TabRecord, TabRegistry } from './clients';
 import type { WebHostConfig } from './config';
@@ -55,6 +58,7 @@ import { relayLoopbackCallback } from './oauth-relay';
 import { receiveUpload, sweepUploads, UploadError } from './uploads';
 
 const MAX_LOGIN_BODY = 4 * 1024;
+const MAX_API_BODY = 8 * 1024 * 1024;
 const MAX_WS_PAYLOAD = 64 * 1024 * 1024;
 
 export type WebHostDeps = {
@@ -171,6 +175,33 @@ export function startWebHost(deps: WebHostDeps): Promise<WebHost> {
     }
   }
 
+  /** Script access: tRPC over HTTP with a bearer API key. No cookie is read, so no CSRF surface. */
+  async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> {
+    res.setHeader('Cache-Control', 'no-store');
+    const key = clientKey(req, config);
+    if (throttle.retryAfterMs(key) > 0) {
+      res.setHeader('Retry-After', String(Math.ceil(throttle.retryAfterMs(key) / 1000)));
+      sendText(res, 429, 'Too many attempts');
+      return;
+    }
+    if (!isValidApiKey(bearerToken(req), config.apiKeyHashes)) {
+      throttle.recordFailure(key);
+      log.warn('[WebHost] Refused API request', { client: key });
+      res.setHeader('WWW-Authenticate', 'Bearer');
+      sendText(res, 401, 'Unauthorized');
+      return;
+    }
+    const path = url.pathname.slice(WEB_HOST_API_TRPC_PATH.length + 1);
+    await nodeHTTPRequestHandler({
+      req,
+      res,
+      path,
+      router: deps.router,
+      createContext: (): Context => ({ getWindow: deps.getWindow }),
+      maxBodySize: MAX_API_BODY,
+    });
+  }
+
   async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
     setSecurityHeaders(res, config.secureCookies);
     const url = new URL(req.url ?? '/', 'http://local');
@@ -184,6 +215,7 @@ export function startWebHost(deps: WebHostDeps): Promise<WebHost> {
       sendText(res, 421, 'Unknown host');
       return;
     }
+    if (pathname.startsWith(`${WEB_HOST_API_TRPC_PATH}/`)) return handleApi(req, res, url);
     if (pathname === WEB_HOST_LOGIN_PATH) {
       if (req.method === 'POST') return handleLogin(req, res);
       if (isSignedIn(req)) return redirect(res, '/');

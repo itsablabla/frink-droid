@@ -4,6 +4,7 @@
  */
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
+import { parseApiKeyHashes } from './api-keys';
 
 export type WebHostConfig = {
   port: number;
@@ -22,6 +23,8 @@ export type WebHostConfig = {
   secureCookies: boolean;
   sessionIdleMs: number;
   sessionMaxMs: number;
+  /** SHA-256 digests of the API keys scripts may send as `Authorization: Bearer`. */
+  apiKeyHashes: string[];
 };
 
 export const MIN_PASSWORD_LENGTH = 12;
@@ -70,6 +73,14 @@ function readPassword(env: NodeJS.ProcessEnv): WebHostConfig['password'] {
   return { kind: 'plain', value: plain };
 }
 
+function readApiKeyHashes(env: NodeJS.ProcessEnv): string[] {
+  try {
+    return parseApiKeyHashes(env.FRINK_WEB_API_KEY_HASHES);
+  } catch (error) {
+    throw new WebHostConfigError((error as Error).message);
+  }
+}
+
 function readFlag(raw: string | undefined): boolean {
   return raw === '1' || raw?.toLowerCase() === 'true';
 }
@@ -96,6 +107,7 @@ export function readWebHostConfig(env: NodeJS.ProcessEnv = process.env): WebHost
     secureCookies: readFlag(env.FRINK_WEB_SECURE_COOKIES),
     sessionIdleMs: 7 * DAY_MS,
     sessionMaxMs: 30 * DAY_MS,
+    apiKeyHashes: readApiKeyHashes(env),
   };
 }
 

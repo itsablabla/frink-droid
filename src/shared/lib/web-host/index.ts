@@ -14,6 +14,8 @@ export const WEB_HOST_LOGIN_PATH = `${WEB_HOST_BASE_PATH}/login`;
 export const WEB_HOST_LOGOUT_PATH = `${WEB_HOST_BASE_PATH}/logout`;
 export const WEB_HOST_UPLOAD_PATH = `${WEB_HOST_BASE_PATH}/upload`;
 export const WEB_HOST_HEALTH_PATH = `${WEB_HOST_BASE_PATH}/health`;
+/** tRPC over plain HTTP for scripts, authorised by `Authorization: Bearer <API key>`. */
+export const WEB_HOST_API_TRPC_PATH = `${WEB_HOST_BASE_PATH}/api/trpc`;
 /** 204 while the session cookie is live, 401 otherwise (a tab checks this after a disconnect). */
 export const WEB_HOST_SESSION_PATH = `${WEB_HOST_BASE_PATH}/session`;
 export const WEB_HOST_MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
