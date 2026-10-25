@@ -43,6 +43,8 @@ export const RENDERER_LIB_DOMAINS = [
   'tree-navigation',
   'utils',
   'webgl',
+  // Web mode: the browser-tab transport that stands in for the Electron preload.
+  'web-host',
   'work-queue',
   'workspace-context',
   'worktree',
@@ -93,6 +95,8 @@ export const MAIN_LIB_DOMAINS = [
   'terminal',
   'test-utils',
   'trpc',
+  // Web mode: serve the UI to browsers (auth, static files, tRPC + desktop bridge sockets).
+  'web-host',
   'webhooks',
   'worktree',
 ];

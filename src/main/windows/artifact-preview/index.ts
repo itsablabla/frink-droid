@@ -19,7 +19,7 @@ import {
   type ArtifactPreviewClosedEvent,
   type ArtifactPreviewOpenRequest,
 } from '../../../shared/types/artifacts/html-artifact';
-import { artifactDataUrl } from './artifact-document';
+import { artifactDataUrl } from '../../../shared/lib/artifacts/artifact-document';
 
 const ARTIFACT_PREVIEW_PARTITION = 'artifact-preview';
 

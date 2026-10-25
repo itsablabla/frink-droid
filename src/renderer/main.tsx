@@ -1,3 +1,5 @@
+// Web mode installs window.desktopApi before any module reads it (no-op inside Electron).
+import './lib/web-host/boot';
 // First import: the modules below already report to Sentry while they load (stored themes decode).
 import './lib/sentry/init';
 import ReactDOM from 'react-dom/client';

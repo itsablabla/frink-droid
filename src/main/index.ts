@@ -39,6 +39,7 @@ import { assertRigRendererBundled } from './lib/platform/rig-renderer';
 import './lib/socket';
 import { initTaskExecutor } from './lib/task-executor';
 import { getTaskPoller } from './lib/task-poller';
+import { isWebModeRequested, prepareWebMode, startWebMode, stopWebMode } from './lib/web-host';
 import {
   createMainWindow,
   DEFAULT_ZOOM_FACTOR,
@@ -64,6 +65,9 @@ if (IS_DEV) {
   // Keychain modal (--password-store is Linux-only, plain-text mode a no-op): mock the keychain.
   if (process.env.FRINK_CDP_PORT) app.commandLine.appendSwitch('use-mock-keychain');
 }
+
+// Web mode must capture IPC registrations and set Chromium switches before anything else runs.
+prepareWebMode();
 
 // Initialize Sentry before app is ready (production only).
 // Uses defaultIntegrations:false + an explicit list to avoid pulling in the
@@ -447,8 +451,18 @@ if (gotTheLock) {
     createMainWindow();
     log.info('[Main] Main window created');
 
-    // Initialize auto-updater (production only)
-    if (app.isPackaged) {
+    if (isWebModeRequested()) {
+      try {
+        await startWebMode(getWindow);
+      } catch (error) {
+        log.error('[Main] Web mode failed to start:', error);
+        app.exit(1);
+        return;
+      }
+    }
+
+    // Initialize auto-updater (production desktop only; a web-mode server updates by image)
+    if (app.isPackaged && !isWebModeRequested()) {
       await initAutoUpdater(getWindow);
       // Setup update check on window focus (instead of periodic interval)
       setupFocusUpdateCheck(getWindow);
@@ -585,6 +599,7 @@ if (gotTheLock) {
     try {
       // ── Phase 1: Stop event sources (sync — prevents new work) ──
       stopHeapWatch();
+      await stopWebMode();
       await stopMobileAccess();
       cancelAllPendingOAuth();
       getTaskPoller().stop();

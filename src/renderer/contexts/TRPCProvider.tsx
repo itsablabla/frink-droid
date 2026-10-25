@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import { perfMark } from '../lib/perf/marks';
 import { trpc, trpcClient } from '../lib/trpc';
+import { isWebHost } from '../lib/web-host/host-info';
 import { shareEqualDeep } from '../lib/query-keys/structural-sharing';
 
 type TRPCProviderProps = {
@@ -21,7 +22,8 @@ export function TRPCProvider({ children }: TRPCProviderProps) {
       defaultOptions: {
         queries: {
           staleTime: 5000,
-          refetchOnWindowFocus: false,
+          // Web mode can have several tabs on one server; a tab catches up when it is looked at.
+          refetchOnWindowFocus: isWebHost(),
           networkMode: 'always',
           retry: false,
           // Date-aware, so an identical Date-bearing refetch keeps its reference (sc-2721).

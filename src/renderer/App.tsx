@@ -14,6 +14,7 @@ import { Toaster } from 'sonner';
 import { EasterEggOverlay } from './components/EasterEggOverlay';
 import { PermissionPrompt, usePermissionPrompts } from './components/PermissionPrompt';
 import { TooltipProvider } from './components/ui/tooltip';
+import { WebHostDialogs } from './components/WebHostDialogs';
 import { WelcomeSplash } from './components/WelcomeSplash';
 import { TRPCProvider } from './contexts/TRPCProvider';
 import { splitViewChatIdsAtom } from './features/agents/atoms';
@@ -265,6 +266,7 @@ export function App() {
               <CopyAcrossPrompt />
               <EasterEggOverlay />
               <WelcomeSplash />
+              <WebHostDialogs />
             </TRPCProvider>
           </TooltipProvider>
         </ThemeEffects>

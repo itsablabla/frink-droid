@@ -1,4 +1,4 @@
-import type { ArtifactPreviewOpenRequest } from '../../../shared/types/artifacts/html-artifact';
+import type { ArtifactPreviewOpenRequest } from '../../types/artifacts/html-artifact';
 
 const ARTIFACT_CSP = [
   "default-src 'none'",
@@ -41,7 +41,13 @@ function escapeHtml(value: string): string {
   return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 }
 
+/** The sandboxed document an HTML artifact renders in (strict CSP + storage/network lockdown). */
+export function artifactDocumentHtml(
+  request: Pick<ArtifactPreviewOpenRequest, 'artifact'>,
+): string {
+  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${ARTIFACT_CSP}"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(request.artifact.title)}</title><script>${ARTIFACT_LOCKDOWN_SCRIPT}</script></head><body>${request.artifact.bodyHtml}</body></html>`;
+}
+
 export function artifactDataUrl(request: ArtifactPreviewOpenRequest): string {
-  const document = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${ARTIFACT_CSP}"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(request.artifact.title)}</title><script>${ARTIFACT_LOCKDOWN_SCRIPT}</script></head><body>${request.artifact.bodyHtml}</body></html>`;
-  return `data:text/html;charset=utf-8,${encodeURIComponent(document)}`;
+  return `data:text/html;charset=utf-8,${encodeURIComponent(artifactDocumentHtml(request))}`;
 }

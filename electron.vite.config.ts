@@ -77,6 +77,9 @@ const config = {
           'electron',
           '@prisma/client',
           '@anthropic-ai/claude-agent-sdk', // ESM module - must use dynamic import
+          // Web mode's socket server. Transitive (not in dependencies), so the deps plugin would
+          // bundle it, and bundling breaks its optional native `bufferutil` probe at runtime.
+          'ws',
         ],
         output: {
           format: 'cjs',

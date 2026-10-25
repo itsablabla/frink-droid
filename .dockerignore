@@ -1,0 +1,6 @@
+# Web image context: only package.json, the built out/ and deploy/web are copied.
+*
+!package.json
+!out/**
+!deploy/web/**
+out/**/*.map

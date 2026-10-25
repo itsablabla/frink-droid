@@ -8,6 +8,7 @@ import { isAllowedShellOpenExternalUrl } from '../../shared/shell-external-url';
 import { registerGitWatcherIPC } from '../lib/git/watcher';
 import { shellOpenExternalGuarded } from '../lib/open-external-guarded';
 import { createAppRouter } from '../lib/trpc/routers';
+import { attachWebHostWindow, isWebModeRequested, WEB_HOST_WINDOW_URL } from '../lib/web-host';
 import { registerArtifactPreviewIpc } from '.';
 import { attachAgentAbortOnRendererLifecycle } from './navigation-abort';
 import { attachMainWindowNavigationGuard, resolveRendererEntryUrl } from './navigation-guard';
@@ -323,16 +324,21 @@ export function createMainWindow(): BrowserWindow {
     });
   }
 
-  revealWhenReady(window, () => {
-    // Apply persisted zoom factor (or default)
-    window.webContents.setZoomFactor(getPersistedZoomFactor());
+  // Web mode: this window is an invisible anchor (Xvfb); browser tabs are the real renderers.
+  const webMode = isWebModeRequested();
+  if (webMode) attachWebHostWindow(window);
 
-    // Ensure native traffic lights are visible by default (login page, loading states)
-    if (process.platform === 'darwin') {
-      window.setWindowButtonVisibility(true);
-    }
-    window.show();
-  });
+  if (!webMode)
+    revealWhenReady(window, () => {
+      // Apply persisted zoom factor (or default)
+      window.webContents.setZoomFactor(getPersistedZoomFactor());
+
+      // Ensure native traffic lights are visible by default (login page, loading states)
+      if (process.platform === 'darwin') {
+        window.setWindowButtonVisibility(true);
+      }
+      window.show();
+    });
 
   // Emit fullscreen change events and manage traffic lights
   window.on('enter-full-screen', () => {
@@ -389,7 +395,9 @@ export function createMainWindow(): BrowserWindow {
     window.webContents,
     resolveRendererEntryUrl(devServerUrl, indexHtmlPath),
   );
-  if (devServerUrl) {
+  if (webMode) {
+    void window.loadURL(WEB_HOST_WINDOW_URL);
+  } else if (devServerUrl) {
     window.loadURL(devServerUrl);
     // Only open DevTools automatically in development
     if (!app.isPackaged) {

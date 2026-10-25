@@ -1,5 +1,7 @@
 import * as React from 'react';
 import { toast } from 'sonner';
+import { isWebHost } from '@/lib/web-host/host-info';
+import { uploadFiles } from '@/lib/web-host/uploads';
 
 /** Drag types used by IDEs (Cursor/VSCode) instead of standard "Files" */
 const IDE_FILE_DRAG_TYPES = ['resourceurls', 'codefiles', 'text/uri-list'];
@@ -117,6 +119,29 @@ function resolveDropTargetFolder(
   return '';
 }
 
+/** Web mode: upload dropped/pasted browser Files, then hand their server paths to the copy. */
+async function copyUploadedFiles(
+  files: File[],
+  copy: (sourcePaths: string[]) => void,
+): Promise<void> {
+  if (files.length === 0) {
+    toast.warning('Only files can be dropped here from a browser.');
+    return;
+  }
+  const toastId = toast.loading(
+    files.length === 1 ? `Uploading ${files[0]?.name}…` : `Uploading ${files.length} files…`,
+  );
+  try {
+    copy(await uploadFiles(files));
+    toast.dismiss(toastId);
+  } catch (error) {
+    toast.error('Upload failed', {
+      id: toastId,
+      description: error instanceof Error ? error.message : undefined,
+    });
+  }
+}
+
 type UseExternalFileDropOptions = {
   projectPath: string;
   treeContainerRef: React.RefObject<HTMLElement | null>;
@@ -171,13 +196,25 @@ export function useExternalFileDrop({
       e.preventDefault();
 
       const files = Array.from(e.dataTransfer.files);
+      const destinationFolder = resolveDropTargetFolder(e.clientX, e.clientY, treeContainerRef);
+      // Web mode: a browser File has no server path; upload it, then copy like a desktop drop.
+      if (isWebHost()) {
+        void copyUploadedFiles(files, (sourcePaths) =>
+          copyExternalFilesMutate({
+            sourcePaths,
+            projectPath,
+            destinationFolder,
+            resolution: 'keepBoth',
+          }),
+        );
+        return;
+      }
       const webUtils = (window as Window & { webUtils?: { getPathForFile?: (f: File) => string } })
         .webUtils;
       let sourcePaths = files.map((f) => webUtils?.getPathForFile?.(f) ?? '').filter(Boolean);
       if (sourcePaths.length === 0) {
         sourcePaths = parseFilePathsFromDataTransfer(e.dataTransfer);
       }
-      const destinationFolder = resolveDropTargetFolder(e.clientX, e.clientY, treeContainerRef);
 
       if (sourcePaths.length === 0) {
         toast.warning(
@@ -199,10 +236,23 @@ export function useExternalFileDrop({
   const onPaste = React.useCallback(
     (e: React.ClipboardEvent) => {
       if (!enabled || !projectPath) return;
+      const destinationFolder = getDestinationFolder?.() ?? '';
+      const pastedFiles = Array.from(e.clipboardData?.files ?? []);
+      if (isWebHost() && pastedFiles.length > 0) {
+        e.preventDefault();
+        void copyUploadedFiles(pastedFiles, (sourcePaths) =>
+          copyExternalFilesMutate({
+            sourcePaths,
+            projectPath,
+            destinationFolder,
+            resolution: 'keepBoth',
+          }),
+        );
+        return;
+      }
       const sourcePaths = getExternalFilePathsFromClipboard(e.clipboardData);
       if (sourcePaths.length === 0) return;
       e.preventDefault();
-      const destinationFolder = getDestinationFolder?.() ?? '';
       copyExternalFilesMutate({
         sourcePaths,
         projectPath,

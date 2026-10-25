@@ -14,6 +14,8 @@ import {
 import { activePaletteAtom } from '@/lib/themes/palette/theme-atoms';
 import { getTerminalTheme } from '@/lib/themes/terminal-theme';
 import { trpc } from '@/lib/trpc';
+import { isWebHost } from '@/lib/web-host/host-info';
+import { uploadFiles } from '@/lib/web-host/uploads';
 import { terminalCwdAtom } from './atoms';
 import { sanitizeForTitle } from './commandBuffer';
 import { buildCdCommand, getCwdSwitchDecision } from './cwd-switch';
@@ -565,17 +567,25 @@ function TerminalInner({
       const files = Array.from(event.dataTransfer.files);
       if (files.length === 0) return;
 
-      // Get file paths (Electron exposes webUtils)
-      const paths = files.map((file) => {
-        return window.webUtils?.getPathForFile?.(file) || file.name;
-      });
-      const text = shellEscapePaths(paths);
-
-      if (!isExitedRef.current) {
-        hasUserInteractedRef.current = true;
-        hasPendingInputRef.current = !text.includes('\r') && !text.includes('\n');
-        writeRef.current({ paneId, data: text });
+      const insert = (paths: string[]) => {
+        const text = shellEscapePaths(paths);
+        if (!isExitedRef.current) {
+          hasUserInteractedRef.current = true;
+          hasPendingInputRef.current = !text.includes('\r') && !text.includes('\n');
+          writeRef.current({ paneId, data: text });
+        }
+      };
+      // Web mode: upload so the shell gets a path that exists on the server.
+      if (isWebHost()) {
+        void uploadFiles(files).then(insert, (error: unknown) =>
+          toast.error('Upload failed', {
+            description: error instanceof Error ? error.message : undefined,
+          }),
+        );
+        return;
       }
+      // Get file paths (Electron exposes webUtils)
+      insert(files.map((file) => window.webUtils?.getPathForFile?.(file) || file.name));
     },
     [paneId],
   );
